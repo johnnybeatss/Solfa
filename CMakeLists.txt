@@ -99,10 +99,11 @@ target_link_libraries(SharedCode
     juce_gui_basics
     juce_gui_extra
     juce::juce_recommended_config_flags
-    juce::juce_recommended_lto_flags
     juce::juce_recommended_warning_flags)
 
-target_link_libraries("${PROJECT_NAME}" PRIVATE SharedCode)
+# Link-time optimisation for the plugin only. Applying it to the Tests target crashed MSVC 14.52
+# ("fatal error C1001: Internal compiler error" during LTCG), and tests don't need it.
+target_link_libraries("${PROJECT_NAME}" PRIVATE SharedCode juce::juce_recommended_lto_flags)
 
 pamplejuce_add_tests()
 pamplejuce_add_benchmarks()
