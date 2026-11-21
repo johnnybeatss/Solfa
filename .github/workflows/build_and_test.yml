@@ -38,13 +38,14 @@ jobs:
       matrix:
         include:
           - name: macOS
-            os: macos-14
+            os: macos-latest
             pluginval-binary: pluginval.app/Contents/MacOS/pluginval
             extra-flags: -G Ninja -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
           - name: Windows
             os: windows-latest
             pluginval-binary: ./pluginval.exe
-            extra-flags: -G Ninja -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl
+            # MSVC rather than clang-cl: the runner's MSVC STL can require a newer Clang than the image ships
+            extra-flags: -G Ninja -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl
           - name: Linux
             os: ubuntu-22.04
             pluginval-binary: ./pluginval
