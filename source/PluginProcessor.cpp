@@ -1,4 +1,5 @@
 #include "PluginProcessor.h"
+#include "PluginEditor.h"
 #include "Presets.h"
 #include "dsp/Tuning.h"
 
@@ -94,6 +95,8 @@ void PluginProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Midi
         juce::AudioBuffer<float> chunk (buffer.getArrayOfWritePointers(), numChannels, start, len);
         processChunk (chunk);
     }
+
+    analyzerFifo.push (buffer);
 }
 
 void PluginProcessor::processChunk (juce::AudioBuffer<float>& buffer) noexcept
@@ -189,9 +192,7 @@ const juce::String PluginProcessor::getProgramName (int index)
 
 juce::AudioProcessorEditor* PluginProcessor::createEditor()
 {
-    // Temporary until the real UI (Phase 5): JUCE's generic editor lists every parameter,
-    // which is enough for listening tests in a DAW.
-    return new juce::GenericAudioProcessorEditor (*this);
+    return new PluginEditor (*this);
 }
 
 void PluginProcessor::getStateInformation (juce::MemoryBlock& destData)

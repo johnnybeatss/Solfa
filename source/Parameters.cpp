@@ -39,6 +39,8 @@ namespace solfa::params
                 [] (float lo, float hi, float v) { return juce::jlimit (lo, hi, v); } };
         }
 
+        juce::String formatDecimals (float v, int decimals) { return juce::String (v, decimals); }
+
         juce::String formatHz (float v, int)
         {
             return v < 1000.0f ? juce::String (v, 1) + " Hz" : juce::String (v / 1000.0f, 2) + " kHz";
@@ -88,7 +90,8 @@ namespace solfa::params
                 juce::AudioParameterFloatAttributes().withLabel ("dB")));
 
             group->addChild (std::make_unique<juce::AudioParameterFloat> (
-                juce::ParameterID { bandId (b, q), 1 }, prefix + "Q", logRange (0.1f, 18.0f), d.q));
+                juce::ParameterID { bandId (b, q), 1 }, prefix + "Q", logRange (0.1f, 18.0f), d.q,
+                juce::AudioParameterFloatAttributes().withStringFromValueFunction ([] (float v, int) { return formatDecimals (v, 2); })));
 
             group->addChild (std::make_unique<juce::AudioParameterChoice> (
                 juce::ParameterID { bandId (b, slope), 1 }, prefix + "Slope", slopeNames, dsp::defaultSlopeIndex));
@@ -111,11 +114,13 @@ namespace solfa::params
 
             group->addChild (std::make_unique<juce::AudioParameterFloat> (
                 juce::ParameterID { bandId (b, atk), 1 }, prefix + "Attack", logRange (1.0f, 200.0f), 10.0f,
-                juce::AudioParameterFloatAttributes().withLabel ("ms")));
+                juce::AudioParameterFloatAttributes().withLabel ("ms").withStringFromValueFunction (
+                    [] (float v, int) { return formatDecimals (v, v < 10.0f ? 1 : 0) + " ms"; })));
 
             group->addChild (std::make_unique<juce::AudioParameterFloat> (
                 juce::ParameterID { bandId (b, rel), 1 }, prefix + "Release", logRange (10.0f, 2000.0f), 150.0f,
-                juce::AudioParameterFloatAttributes().withLabel ("ms")));
+                juce::AudioParameterFloatAttributes().withLabel ("ms").withStringFromValueFunction (
+                    [] (float v, int) { return formatDecimals (v, 0) + " ms"; })));
 
             layout.add (std::move (group));
         }
@@ -166,7 +171,8 @@ namespace solfa::params
 
         layout.add (std::make_unique<juce::AudioParameterFloat> (
             juce::ParameterID { resDecay, 1 }, "Resonance Decay", logRange (0.2f, 5.0f), 1.5f,
-            juce::AudioParameterFloatAttributes().withLabel ("s")));
+            juce::AudioParameterFloatAttributes().withLabel ("s").withStringFromValueFunction (
+                [] (float v, int) { return formatDecimals (v, 2) + " s"; })));
 
         layout.add (std::make_unique<juce::AudioParameterFloat> (
             juce::ParameterID { outputGain, 1 }, "Output",

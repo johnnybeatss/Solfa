@@ -2,6 +2,7 @@
 
 #include "Parameters.h"
 #include "dsp/EqEngine.h"
+#include "dsp/AnalyzerFifo.h"
 #include "dsp/Loudness.h"
 #include "dsp/Resonator.h"
 
@@ -46,6 +47,9 @@ public:
     // Focus frequency after Key Snap (or exact when Pure is on), as used by Literal and Resonance.
     double getEffectiveFocusHz() const noexcept { return effectiveFocusHz.load(); }
 
+    // Output (mono mix) for the analyser in the editor.
+    solfa::dsp::AnalyzerFifo& getAnalyzerFifo() noexcept { return analyzerFifo; }
+
     // Literal mode band width (deliberately narrow: the one place presets may go narrow).
     static constexpr double literalQ = 6.0;
 
@@ -74,6 +78,8 @@ private:
     std::atomic<double> effectiveFocusHz { 528.0 };
     std::atomic<bool> snapOutputGain { false };
     int currentProgram = 0;
+
+    solfa::dsp::AnalyzerFifo analyzerFifo;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginProcessor)
 };

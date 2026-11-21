@@ -22,6 +22,20 @@ a Focus frequency with Key Snap (A = 440 / 432 / 444, key, scale) or Pure, a Lit
 Resonance: tuned resonators that ring at the Focus and its octaves with your music. Presets show
 up in your DAW's preset list. Details: [`docs/presets.md`](docs/presets.md).
 
+**Phase 7 (interface)**: Solfa's own UI: live analyser, EQ curve with draggable band nodes,
+solfeggio markers and the Focus line, Spectrum Grab, band and Focus & Resonance panels, preset
+browser and an "About the science" panel.
+
+![Solfa](docs/images/editor.png)
+
+| In the display | Does |
+|---|---|
+| Drag a node | Frequency and gain |
+| Mouse wheel on a node | Q |
+| Double-click empty space / a node | Add a band / remove it |
+| Right-click a node | Shape, slope, stereo placement, Dynamic, remove |
+| Alt-click | Spectrum Grab: add a band on the nearest peak in the analyser |
+
 **Phase 6 (dynamic EQ)**: any bell, shelf or tilt band can react to its own frequency region,
 taming it (or lifting it) only when it gets loud, with Threshold, Range, Attack and Release.
 There is no custom UI yet: the plugin shows a plain list of its parameters until Phase 5.
