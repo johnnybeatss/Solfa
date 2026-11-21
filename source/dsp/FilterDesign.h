@@ -76,6 +76,9 @@ namespace solfa::dsp
     // Top-level design used by the EQ engine. Safe to call on the audio thread (no allocation).
     BiquadCoefficients design (BandSettings settings, double sampleRate) noexcept;
 
+    // Power gain |H|^2 of a digital biquad at frequencyHz.
+    double powerGain (const BiquadCoefficients& c, double frequencyHz, double sampleRate) noexcept;
+
     // Magnitude response in dB of a digital biquad at frequencyHz.
     double magnitudeDb (const BiquadCoefficients& c, double frequencyHz, double sampleRate) noexcept;
 

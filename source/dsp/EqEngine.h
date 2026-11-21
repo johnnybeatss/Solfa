@@ -37,6 +37,12 @@ namespace solfa::dsp
         void process (double* const* channels, int numChannels, int numSamples) noexcept;
 
         bool isActive() const noexcept { return active; }
+
+        // True if this band currently shapes the response (used by auto-gain).
+        bool contributesToCurve() const noexcept;
+
+        // Increments whenever the coefficients change.
+        unsigned getVersion() const noexcept { return version; }
         const BiquadCoefficients& getCoefficients() const noexcept { return filters[0].getCoefficients(); }
 
     private:
@@ -59,6 +65,7 @@ namespace solfa::dsp
 
         std::array<Biquad, maxChannels> filters;
         bool coefficientsDirty = true;
+        unsigned version = 0;
     };
 
     // The full EQ: numBands bands in series, processed in double precision.
@@ -81,10 +88,19 @@ namespace solfa::dsp
 
         const EqBand& getBand (int index) const noexcept { return bands[(size_t) index]; }
 
+        // Power gain |H(f)|^2 of the whole curve (bands that currently contribute).
+        double curvePowerAt (double frequencyHz) const noexcept;
+
+        // Changes whenever any band's coefficients change.
+        unsigned getVersion() const noexcept;
+
+        double getSampleRate() const noexcept { return sampleRate; }
+
     private:
         std::array<EqBand, numBands> bands;
         std::array<BandTarget, numBands> targets;
         double amount = 1.0;
+        double sampleRate = 48000.0;
         int channels = 2;
 
         std::array<std::array<double, updateInterval>, maxChannels> scratch {};

@@ -113,6 +113,14 @@ namespace solfa::dsp
             f.setCoefficients (c);
 
         coefficientsDirty = false;
+        ++version;
+    }
+
+    bool EqBand::contributesToCurve() const noexcept
+    {
+        if (! active)
+            return false;
+        return isGainType() || cutMix.getTargetValue() > 0.0;
     }
 
     void EqBand::process (double* const* channels, int numChannels, int numSamples) noexcept
@@ -158,8 +166,9 @@ namespace solfa::dsp
     }
 
     //==============================================================================
-    void EqEngine::prepare (double sampleRate, int /*maxBlockSize*/, int numChannels)
+    void EqEngine::prepare (double newSampleRate, int /*maxBlockSize*/, int numChannels)
     {
+        sampleRate = newSampleRate;
         channels = std::clamp (numChannels, 1, maxChannels);
         constexpr double smoothingSeconds = 0.03; // within the 20-50 ms range from the research
 
@@ -171,6 +180,23 @@ namespace solfa::dsp
     {
         for (auto& b : bands)
             b.reset();
+    }
+
+    double EqEngine::curvePowerAt (double frequencyHz) const noexcept
+    {
+        double power = 1.0;
+        for (const auto& b : bands)
+            if (b.contributesToCurve() && ! b.getCoefficients().isIdentity())
+                power *= powerGain (b.getCoefficients(), frequencyHz, sampleRate);
+        return power;
+    }
+
+    unsigned EqEngine::getVersion() const noexcept
+    {
+        unsigned v = 17;
+        for (const auto& b : bands)
+            v = v * 1000003u + b.getVersion() * 2u + (b.contributesToCurve() ? 1u : 0u);
+        return v;
     }
 
     bool EqEngine::isBypassed() const noexcept

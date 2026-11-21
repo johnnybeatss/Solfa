@@ -9,6 +9,8 @@ namespace solfa::params
 {
     inline constexpr auto outputGain = "outputGain";
     inline constexpr auto amount = "amount";
+    inline constexpr auto autoGain = "autoGain"; // static loudness compensation from the curve
+    inline constexpr auto compare = "compare";   // loudness-matched bypass for honest A/B
 
     // Per-band IDs: "b1_on", "b1_type", "b1_freq", "b1_gain", "b1_q" ... "b8_q"
     juce::String bandId (int bandIndex, const char* suffix);
@@ -39,6 +41,8 @@ namespace solfa::params
 
         std::atomic<float>* outputGain = nullptr;
         std::atomic<float>* amount = nullptr;
+        std::atomic<float>* autoGain = nullptr;
+        std::atomic<float>* compare = nullptr;
         std::array<BandHandles, dsp::numBands> bands;
     };
 }

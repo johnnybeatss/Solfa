@@ -56,3 +56,33 @@ the fast-automation click test (`"Fast automation does not click"`: max second d
 
 8 bands active, stereo, 512 samples at 48 kHz: about 25 µs per block (Release, Linux CI box),
 about 0.2% of the 10.7 ms real-time budget.
+
+## Gain staging (Phase 3)
+
+**Auto Gain (on by default).** A static estimate computed from the EQ curve, not by riding the
+signal (signal-following gain is reported to "pump"). The curve's power gain is averaged over
+64 log-spaced points from 20 Hz to 20 kHz (equal weights = pink noise) with each point
+K-weighted per ITU-R BS.1770, and the output is turned down by the result (limit ±18 dB). A
+flat EQ gives exactly 0 dB, so the default setting stays bit-transparent.
+
+Measured with pink noise through the plugin (`tests/GainStaging.cpp`), loudness change with
+Auto Gain on:
+
+| Curve | Compensation | Residual loudness change |
+|---|---|---|
+| High shelf +6 dB @ 3 kHz | -1.36 dB | +0.07 dB |
+| Low shelf +6 dB @ 150 Hz | -0.96 dB | -0.03 dB |
+| Bell -8 dB @ 1 kHz, Q 0.7 | +3.74 dB | +0.15 dB |
+| Tilt +4 dB @ 1 kHz | -0.97 dB | +0.07 dB |
+
+Real music is not pink noise, so expect larger residuals on very bass- or treble-heavy material;
+that is what Compare is for.
+
+**Compare (level-matched bypass).** Plays the unprocessed signal turned to the processed
+signal's measured loudness. Both are measured continuously with K-weighted meters (3 s
+integration, BS.1770 "short-term"), so the match reflects the actual audio. Switching
+crossfades over 30 ms; the matching gain follows over 200 ms. In the test, the processed
+signal was +2.95 dB louder and Compare played the dry signal at +2.98 dB.
+
+The K-weighting filters use libebur128's parameterisation, which reproduces the 48 kHz
+coefficients published in BS.1770 to about 1e-15 and works at any sample rate.

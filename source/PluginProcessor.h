@@ -2,6 +2,7 @@
 
 #include "Parameters.h"
 #include "dsp/EqEngine.h"
+#include "dsp/Loudness.h"
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
@@ -38,11 +39,28 @@ public:
     juce::AudioProcessorValueTreeState& getState() noexcept { return state; }
     const solfa::dsp::EqEngine& getEngine() const noexcept { return engine; }
 
+    // Current static auto-gain compensation in dB (0 when Auto Gain is off or the EQ is flat).
+    double getAutoGainDb() const noexcept { return autoGainDb; }
+
 private:
+    void processChunk (juce::AudioBuffer<float>& buffer) noexcept;
+
     juce::AudioProcessorValueTreeState state;
     solfa::params::Handles handles;
     solfa::dsp::EqEngine engine;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Multiplicative> outputGain { 1.0f };
+
+    // Auto gain
+    solfa::dsp::AutoGainEstimator autoGainEstimator;
+    unsigned lastCurveVersion = 0;
+    double curveLoudnessDb = 0.0;
+    double autoGainDb = 0.0;
+
+    // Level-matched compare
+    solfa::dsp::LoudnessMeter inputMeter, outputMeter;
+    juce::AudioBuffer<float> dry;
+    juce::SmoothedValue<float> compareMix { 0.0f };
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Multiplicative> matchGain { 1.0f };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginProcessor)
 };

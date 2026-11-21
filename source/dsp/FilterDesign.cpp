@@ -273,12 +273,16 @@ namespace solfa::dsp
         return designBestMatched (s, sampleRate);
     }
 
-    double magnitudeDb (const BiquadCoefficients& c, double frequencyHz, double sampleRate) noexcept
+    double powerGain (const BiquadCoefficients& c, double frequencyHz, double sampleRate) noexcept
     {
         const auto z1 = std::polar (1.0, -twoPi * frequencyHz / sampleRate);
         const auto z2 = z1 * z1;
-        const auto h = (c.b0 + c.b1 * z1 + c.b2 * z2) / (1.0 + c.a1 * z1 + c.a2 * z2);
-        return 20.0 * std::log10 (std::abs (h));
+        return std::norm ((c.b0 + c.b1 * z1 + c.b2 * z2) / (1.0 + c.a1 * z1 + c.a2 * z2));
+    }
+
+    double magnitudeDb (const BiquadCoefficients& c, double frequencyHz, double sampleRate) noexcept
+    {
+        return 10.0 * std::log10 (powerGain (c, frequencyHz, sampleRate));
     }
 
     double analogMagnitudeDb (const BandSettings& settings, double frequencyHz) noexcept

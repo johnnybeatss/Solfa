@@ -85,6 +85,15 @@ namespace solfa::params
             juce::NormalisableRange<float> (0.0f, 150.0f, 0.1f), 100.0f,
             juce::AudioParameterFloatAttributes().withLabel ("%")));
 
+        // On by default: listeners judge louder as better, so keep the level steady while EQing.
+        layout.add (std::make_unique<juce::AudioParameterBool> (
+            juce::ParameterID { autoGain, 1 }, "Auto Gain", true));
+
+        // Plays the unprocessed signal at the processed signal's measured loudness.
+        layout.add (std::make_unique<juce::AudioParameterBool> (
+            juce::ParameterID { compare, 1 }, "Compare (level-matched bypass)", false,
+            juce::AudioParameterBoolAttributes().withAutomatable (false)));
+
         layout.add (std::make_unique<juce::AudioParameterFloat> (
             juce::ParameterID { outputGain, 1 }, "Output",
             juce::NormalisableRange<float> (-24.0f, 24.0f, 0.01f), 0.0f,
@@ -114,6 +123,8 @@ namespace solfa::params
 
         outputGain = get (params::outputGain);
         amount = get (params::amount);
+        autoGain = get (params::autoGain);
+        compare = get (params::compare);
 
         for (int b = 0; b < dsp::numBands; ++b)
         {
