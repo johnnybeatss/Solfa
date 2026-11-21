@@ -3,16 +3,17 @@
 #include "Parameters.h"
 #include "dsp/EqEngine.h"
 #include "dsp/AnalyzerFifo.h"
+#include "dsp/LinearPhase.h"
 #include "dsp/Loudness.h"
 #include "dsp/Resonator.h"
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
-class PluginProcessor : public juce::AudioProcessor
+class PluginProcessor : public juce::AudioProcessor, private juce::AsyncUpdater
 {
 public:
     PluginProcessor();
-    ~PluginProcessor() override = default;
+    ~PluginProcessor() override;
 
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
@@ -50,11 +51,16 @@ public:
     // Output (mono mix) for the analyser in the editor.
     solfa::dsp::AnalyzerFifo& getAnalyzerFifo() noexcept { return analyzerFifo; }
 
+    // Linear-phase mode (Phase parameter). Exposed for tests and the UI.
+    solfa::dsp::LinearPhaseEq& getLinearPhase() noexcept { return linearPhase; }
+
     // Literal mode band width (deliberately narrow: the one place presets may go narrow).
     static constexpr double literalQ = 6.0;
 
 private:
     void processChunk (juce::AudioBuffer<float>& buffer) noexcept;
+    void handleAsyncUpdate() override; // reports latency changes to the host (message thread)
+    std::uint64_t curveHash() const noexcept;
 
     juce::AudioProcessorValueTreeState state;
     solfa::params::Handles handles;
@@ -80,6 +86,9 @@ private:
     int currentProgram = 0;
 
     solfa::dsp::AnalyzerFifo analyzerFifo;
+
+    solfa::dsp::LinearPhaseEq linearPhase;
+    int reportedPhaseMode = -1;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginProcessor)
 };

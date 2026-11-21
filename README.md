@@ -36,6 +36,9 @@ browser and an "About the science" panel.
 | Right-click a node | Shape, slope, stereo placement, Dynamic, remove |
 | Alt-click | Spectrum Grab: add a band on the nearest peak in the analyser |
 
+**Phase 8 (linear phase)**: a Phase selector (Zero Latency / Linear Phase / Linear Phase HD) for
+mastering-style EQ without phase shift. Latency is reported to your DAW, which compensates.
+
 **Phase 6 (dynamic EQ)**: any bell, shelf or tilt band can react to its own frequency region,
 taming it (or lifting it) only when it gets loud, with Threshold, Range, Attack and Release.
 There is no custom UI yet: the plugin shows a plain list of its parameters until Phase 5.

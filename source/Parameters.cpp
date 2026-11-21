@@ -174,6 +174,12 @@ namespace solfa::params
             juce::AudioParameterFloatAttributes().withLabel ("s").withStringFromValueFunction (
                 [] (float v, int) { return formatDecimals (v, 2) + " s"; })));
 
+        // Not automatable: changing it changes the plugin's latency.
+        layout.add (std::make_unique<juce::AudioParameterChoice> (
+            juce::ParameterID { phaseMode, 1 }, "Phase",
+            juce::StringArray { "Zero Latency", "Linear Phase", "Linear Phase HD" }, 0,
+            juce::AudioParameterChoiceAttributes().withAutomatable (false)));
+
         layout.add (std::make_unique<juce::AudioParameterFloat> (
             juce::ParameterID { outputGain, 1 }, "Output",
             juce::NormalisableRange<float> (-24.0f, 24.0f, 0.01f), 0.0f,
@@ -221,6 +227,7 @@ namespace solfa::params
         literal = get (params::literal);
         resAmount = get (params::resAmount);
         resDecay = get (params::resDecay);
+        phaseMode = get (params::phaseMode);
 
         for (int b = 0; b < dsp::numBands; ++b)
         {

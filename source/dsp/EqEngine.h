@@ -163,6 +163,10 @@ namespace solfa::dsp
 
         void process (juce::AudioBuffer<float>& buffer) noexcept;
 
+        // Advances smoothing and coefficients without touching audio (linear-phase mode, where
+        // the FIR does the filtering but auto-gain still needs the current static curve).
+        void updateOnly (int numSamples) noexcept;
+
         // True if no band is doing anything (lets the processor skip work and stay bit-exact).
         bool isBypassed() const noexcept;
 

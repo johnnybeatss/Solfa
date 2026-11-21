@@ -9,8 +9,8 @@
 | 5 | Presets (solfeggio-named), Key Snap, Literal mode, **Resonance** | Done (see `docs/presets.md`) |
 | 6 | Dynamic EQ (per-band threshold / range / attack / release) | Done |
 | 7 | Interface: draggable curve, analyser, Spectrum Grab, solfeggio markers, "About the science" | Done |
-| 8 | Linear-phase mode | Next |
-| 9 | EQ Match (copy a reference track's tonal balance) | |
+| 8 | Linear-phase mode | Done |
+| 9 | EQ Match (copy a reference track's tonal balance) | Next |
 | 10 | DAW testing and beta | |
 
 ## Resonance (Phase 5)

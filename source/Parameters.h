@@ -21,6 +21,7 @@ namespace solfa::params
     inline constexpr auto literal = "literal";     // narrow boost at the focus frequency, 0-3 dB
     inline constexpr auto resAmount = "resAmount"; // Resonance level, %
     inline constexpr auto resDecay = "resDecay";   // Resonance ring time, s
+    inline constexpr auto phaseMode = "phaseMode"; // Zero Latency / Linear Phase / Linear Phase HD
 
     // Per-band IDs: "b1_on", "b1_type", "b1_freq", "b1_gain", "b1_q" ... "b8_q"
     juce::String bandId (int bandIndex, const char* suffix);
@@ -75,6 +76,7 @@ namespace solfa::params
         std::atomic<float>* literal = nullptr;
         std::atomic<float>* resAmount = nullptr;
         std::atomic<float>* resDecay = nullptr;
+        std::atomic<float>* phaseMode = nullptr;
         std::array<BandHandles, dsp::numBands> bands;
     };
 }

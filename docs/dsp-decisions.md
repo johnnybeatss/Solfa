@@ -131,3 +131,33 @@ Available on bell, shelf and tilt bands: **Dynamic** on/off, **Threshold**, **Ra
 Measured (tests/DynamicEq.cpp): 20 dB over threshold gives exactly the Range (-6.00 dB, +4.00
 dB); 6 dB over gives half (-3.05 dB); 50 ms attack moves only -0.48 dB in the first 10 ms;
 300 ms release still holds -5.47 dB 30 ms after the signal drops.
+
+## Linear phase (Phase 8)
+
+**Phase** setting: Zero Latency (default, the IIR engine), Linear Phase (4096-tap FIR at 48 kHz,
+latency 2048 samples ≈ 43 ms) or Linear Phase HD (16384 taps, 8192 samples ≈ 171 ms, finer
+low-frequency detail). FIR length scales with sample rate to keep the same resolution.
+
+- **Design** (background thread, never the audio thread): the static EQ curve (same design
+  functions as the display and engine, including Amount and Literal) is sampled on the FFT grid
+  as a real, even (zero-phase) spectrum, inverse-FFT'd, centred and Hann-windowed. A flat
+  curve gives a single unit impulse at the centre (tested; this also pins JUCE's 1/N inverse
+  FFT scaling). The FIR's magnitude matches the IIR design within 0.1 dB from 100 Hz to 8 kHz
+  and the impulse is symmetric (tested).
+- **Hand-off:** a lock-free slot passes each new FIR to the audio thread, which calls
+  `juce::dsp::Convolution::loadImpulseResponse` (wait-free, and JUCE requires it on the audio
+  thread). The convolution only swaps in a new IR inside `process()`, so it runs on every block
+  in this mode; until the mode's first FIR is live (plus 100 ms for the engine's crossfade from
+  its default undelayed IR) Solfa outputs the input delayed by the same latency, so timing never
+  jumps. Curve edits crossfade inside JUCE's engine.
+- **Latency** is reported to the host (updated from the message thread when the mode changes).
+  Compare's dry signal is delayed to match.
+- **Measured:** flat linear phase equals the input delayed by exactly the reported latency
+  (worst difference 1.8e-7); a +6 dB bell gives the same gain in both modes (6.00 vs 5.998 dB).
+  The default Zero Latency mode stays bit-exact at flat settings; linear phase is not bit-exact
+  (FFT convolution rounding, about -135 dB here).
+
+**Limits:** in linear-phase mode Dynamic bands act as static bands and Left/Right/Mid/Side
+bands act as stereo bands (one FIR for both channels); the display says so when it applies.
+Switching mode changes latency, which some hosts handle with a brief glitch. Linear phase
+pre-rings before sharp transients, which is why it is not the default.

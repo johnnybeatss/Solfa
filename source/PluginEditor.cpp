@@ -26,6 +26,10 @@ PluginEditor::PluginEditor (PluginProcessor& p)
     };
     refreshPresetBox();
 
+    phaseBox.addItemList ({ "Zero Latency", "Linear Phase", "Linear Phase HD" }, 1);
+    phaseBox.setTooltip ("Linear phase: no phase shift, adds latency (the DAW compensates) and pre-ringing on sharp hits");
+    phaseAttachment = std::make_unique<ui::APVTS::ComboBoxAttachment> (p.getState(), params::phaseMode, phaseBox);
+
     compare.setClickingTogglesState (true);
     compare.setTooltip ("Plays the unprocessed sound at the same loudness, so you judge tone, not volume");
     autoGainAttachment = std::make_unique<ui::APVTS::ButtonAttachment> (p.getState(), params::autoGain, autoGain);
@@ -42,7 +46,7 @@ PluginEditor::PluginEditor (PluginProcessor& p)
 
     display.onSelectionChanged = [this] (int band) { bandPanel.showBand (band); };
 
-    for (juce::Component* c : std::initializer_list<juce::Component*> { &presetBox, &prevPreset, &nextPreset, &autoGain, &compare,
+    for (juce::Component* c : std::initializer_list<juce::Component*> { &presetBox, &prevPreset, &nextPreset, &phaseBox, &autoGain, &compare,
              &science, &output, &outputLabel, &display, &bandPanel, &spiritPanel })
         addAndMakeVisible (c);
     addChildComponent (sciencePanel);
@@ -83,6 +87,8 @@ void PluginEditor::resized()
     prevPreset.setBounds (top.removeFromLeft (28));
     presetBox.setBounds (top.removeFromLeft (220).reduced (4, 0));
     nextPreset.setBounds (top.removeFromLeft (28));
+    top.removeFromLeft (12);
+    phaseBox.setBounds (top.removeFromLeft (150));
     science.setBounds (top.removeFromRight (32));
     top.removeFromRight (8);
     output.setBounds (top.removeFromRight (170));

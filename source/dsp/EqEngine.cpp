@@ -354,6 +354,19 @@ namespace solfa::dsp
         return std::none_of (bands.begin(), bands.end(), [] (const EqBand& b) { return b.isActive(); });
     }
 
+    void EqEngine::updateOnly (int numSamples) noexcept
+    {
+        for (int i = 0; i < numBands; ++i)
+            bands[(size_t) i].setTarget (targets[(size_t) i], amount);
+        bands[(size_t) numBands].setTarget (literalTarget, amount);
+        if (snapRequested.exchange (false))
+            for (auto& b : bands)
+                b.snapToTarget();
+        for (int start = 0; start < numSamples; start += updateInterval)
+            for (auto& b : bands)
+                b.advance (std::min (updateInterval, numSamples - start));
+    }
+
     void EqEngine::process (juce::AudioBuffer<float>& buffer) noexcept
     {
         const auto numChannels = std::min ({ buffer.getNumChannels(), channels, maxChannels });

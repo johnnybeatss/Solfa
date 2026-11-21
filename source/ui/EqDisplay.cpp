@@ -2,6 +2,7 @@
 #include "../PluginProcessor.h"
 #include "../dsp/Tuning.h"
 #include "Theme.h"
+#include "../dsp/LinearPhase.h"
 
 #include <cmath>
 
@@ -310,6 +311,25 @@ namespace solfa::ui
             g.drawVerticalLine (juce::roundToInt (x), area.getY(), area.getBottom());
             g.setFont (juce::FontOptions (11.0f));
             g.drawText ("Grab " + formatHz (f), juce::Rectangle<float> (x + 4, area.getY() + 4, 120, 14), juce::Justification::centredLeft);
+        }
+
+        // Linear phase: latency and what behaves differently
+        if (const auto mode = juce::jlimit (0, 2, (int) handles.phaseMode->load()); mode > 0)
+        {
+            const auto fs = model.getSampleRate();
+            const auto ms = 1000.0 * dsp::LinearPhaseEq::latencyFor (mode, fs) / fs;
+            juce::String note = "Linear phase, latency " + juce::String (ms, 0) + " ms";
+            bool changed = false;
+            for (int b = 0; b < dsp::numBands; ++b)
+            {
+                const auto& t = model.getTarget (b);
+                changed = changed || (t.enabled && (t.dynamic || t.placement != dsp::StereoPlacement::stereo));
+            }
+            if (changed)
+                note << "  |  Dynamic and Left/Right/Mid/Side bands act as static stereo bands in this mode";
+            g.setColour (theme::accent);
+            g.setFont (juce::FontOptions (11.0f));
+            g.drawText (note, area.reduced (8, 6).removeFromTop (14), juce::Justification::centredRight);
         }
 
         g.setColour (theme::panelEdge);

@@ -27,6 +27,8 @@ private:
     juce::ComboBox presetBox;
     juce::TextButton prevPreset { "<" }, nextPreset { ">" };
     juce::ToggleButton autoGain { "Auto Gain" };
+    juce::ComboBox phaseBox;
+    std::unique_ptr<solfa::ui::APVTS::ComboBoxAttachment> phaseAttachment;
     juce::TextButton compare { "Compare" }, science { "?" };
     juce::Slider output { juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight };
     juce::Label outputLabel { {}, "Output" };

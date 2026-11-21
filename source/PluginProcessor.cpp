@@ -1,5 +1,8 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "ui/CurveModel.h"
+
+#include <cstring>
 #include "Presets.h"
 #include "dsp/Tuning.h"
 
@@ -17,6 +20,44 @@ PluginProcessor::PluginProcessor()
       state (*this, nullptr, "SolfaState", solfa::params::createLayout()),
       handles (state)
 {
+    // Linear phase: the design thread reads the curve straight from the parameter atomics,
+    // using its own CurveModel (touched only on that thread).
+    linearPhase.curveHash = [this] { return curveHash(); };
+    linearPhase.curvePower = [this, model = std::make_shared<solfa::ui::CurveModel>()] (const std::vector<double>& freqs,
+                                 std::vector<double>& power, double fs) {
+        model->update (handles, fs, effectiveFocusHz.load());
+        power.resize (freqs.size());
+        for (size_t i = 0; i < freqs.size(); ++i)
+            power[i] = std::pow (10.0, model->totalDb (std::max (freqs[i], 1.0)) / 10.0);
+    };
+}
+
+PluginProcessor::~PluginProcessor()
+{
+    cancelPendingUpdate();
+    linearPhase.release();
+}
+
+std::uint64_t PluginProcessor::curveHash() const noexcept
+{
+    std::uint64_t h = 1469598103934665603ull; // FNV-1a over the values that shape the static curve
+    auto mix = [&h] (float v) {
+        std::uint32_t bits;
+        std::memcpy (&bits, &v, sizeof bits);
+        h = (h ^ bits) * 1099511628211ull;
+    };
+    for (const auto& b : handles.bands)
+        for (auto* p : { b.on, b.type, b.freq, b.gain, b.q, b.slope })
+            mix (p->load());
+    mix (handles.amount->load());
+    mix (handles.literal->load());
+    mix ((float) effectiveFocusHz.load());
+    return h;
+}
+
+void PluginProcessor::handleAsyncUpdate()
+{
+    setLatencySamples (solfa::dsp::LinearPhaseEq::latencyFor (reportedPhaseMode, getSampleRate()));
 }
 
 void PluginProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
@@ -32,6 +73,9 @@ void PluginProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     inputMeter.prepare (sampleRate, numChannels);
     outputMeter.prepare (sampleRate, numChannels);
     dry.setSize (juce::jmax (1, numChannels), juce::jmax (samplesPerBlock, 512));
+    linearPhase.prepare (sampleRate, dry.getNumSamples(), numChannels);
+    reportedPhaseMode = (int) handles.phaseMode->load();
+    setLatencySamples (solfa::dsp::LinearPhaseEq::latencyFor (reportedPhaseMode, sampleRate));
 
     outputGain.reset (sampleRate, gainSmoothingSeconds);
     outputGain.setCurrentAndTargetValue (
@@ -87,6 +131,15 @@ void PluginProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Midi
     resonator.setDecaySeconds (handles.resDecay->load());
     resonator.setAmount (handles.resAmount->load() / 100.0);
 
+    // Phase mode: tell the host about latency changes from the message thread.
+    const auto phase = juce::jlimit (0, 2, (int) handles.phaseMode->load());
+    linearPhase.setMode (phase);
+    if (phase != reportedPhaseMode)
+    {
+        reportedPhaseMode = phase;
+        triggerAsyncUpdate();
+    }
+
     // Work in chunks no larger than the preallocated dry buffer (no allocation here).
     const auto numChannels = juce::jmin (getTotalNumInputChannels(), dry.getNumChannels());
     for (int start = 0; start < buffer.getNumSamples(); start += dry.getNumSamples())
@@ -113,7 +166,16 @@ void PluginProcessor::processChunk (juce::AudioBuffer<float>& buffer) noexcept
             dry.copyFrom (ch, 0, buffer, ch, 0, numSamples);
 
     // 2. EQ, then Resonance (excited by the EQ'd signal)
-    engine.process (buffer);
+    const bool linear = linearPhase.getMode() != solfa::dsp::LinearPhaseEq::off;
+    if (linear)
+    {
+        engine.updateOnly (numSamples); // keeps the static curve current for auto gain
+        linearPhase.process (buffer);
+    }
+    else
+    {
+        engine.process (buffer);
+    }
     resonator.process (buffer);
 
     // 3. Output gain + static auto gain (re-estimated only when the curve changes)
@@ -162,7 +224,8 @@ void PluginProcessor::processChunk (juce::AudioBuffer<float>& buffer) noexcept
         for (int ch = 0; ch < numChannels; ++ch)
         {
             auto& y = buffer.getWritePointer (ch)[i];
-            y += mix * (g * dry.getSample (ch, i) - y);
+            const auto drySample = linear ? linearPhase.getDelayedInput().getSample (ch, i) : dry.getSample (ch, i);
+            y += mix * (g * drySample - y);
         }
     }
 }
