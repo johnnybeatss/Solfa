@@ -105,3 +105,38 @@ TEST_CASE ("Dynamic EQ processing cost")
         return buffer.getSample (0, 0);
     };
 }
+
+TEST_CASE ("Linear phase processing cost")
+{
+    for (int mode : { 1, 2 })
+    {
+        PluginProcessor plugin;
+        auto* phase = plugin.getState().getParameter (solfa::params::phaseMode);
+        phase->setValueNotifyingHost (phase->convertTo0to1 ((float) mode));
+        plugin.prepareToPlay (48000.0, 512);
+        auto* gain = plugin.getState().getParameter (solfa::params::bandId (1, solfa::params::gain));
+        gain->setValueNotifyingHost (gain->convertTo0to1 (4.0f));
+        auto* on = plugin.getState().getParameter (solfa::params::bandId (1, solfa::params::on));
+        on->setValueNotifyingHost (1.0f);
+
+        juce::AudioBuffer<float> buffer (2, 512);
+        juce::MidiBuffer midi;
+        for (int ch = 0; ch < 2; ++ch)
+            for (int i = 0; i < 512; ++i)
+                buffer.setSample (ch, i, 0.1f * std::sin (0.05f * (float) i));
+        plugin.processBlock (buffer, midi);
+        plugin.getLinearPhase().designNow();
+        for (int k = 0; k < 1000 && ! plugin.getLinearPhase().isFilterActive(); ++k)
+        {
+            plugin.processBlock (buffer, midi);
+            std::this_thread::sleep_for (std::chrono::milliseconds (5));
+        }
+        REQUIRE (plugin.getLinearPhase().isFilterActive()); // measure the convolution, not the pass-through
+
+        BENCHMARK (mode == 1 ? "Linear Phase, stereo, 512 samples" : "Linear Phase HD, stereo, 512 samples")
+        {
+            plugin.processBlock (buffer, midi);
+            return buffer.getSample (0, 0);
+        };
+    }
+}

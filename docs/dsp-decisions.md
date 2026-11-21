@@ -178,3 +178,8 @@ pre-rings before sharp transients, which is why it is not the default.
 - **Measured:** a known 3-band curve is fitted with 3 bands to 0.05 dB RMS; white noise EQ'd with a
   known curve and matched against plain noise recovers that curve to 0.20 dB RMS (7 bands), and
   through the plugin's own Apply to 0.24 dB RMS (5 bands).
+
+**Linear-phase CPU** (Linux CI box, 48 kHz, stereo, 512-sample blocks, FIR live): Linear Phase
+about 190-270 µs per block (about 2-2.5% of real time), Linear Phase HD about 70-85 µs. HD measured
+cheaper in JUCE's convolution engine; it was verified to be filtering correctly (a +6 dB bell reads
+5.9999 dB). Zero Latency with all 24 bands active: about 80-90 µs.

@@ -171,17 +171,20 @@ TEST_CASE ("Linear phase and zero latency apply the same gain", "[linearphase]")
         setParam (p, params::bandId (0, params::q), 1.0f);
         p.prepareToPlay (48000, block);
     };
-    PluginProcessor zero, linear;
-    configure (zero, 0.0f);
-    configure (linear, 1.0f);
-    REQUIRE (waitForFilter (linear, block));
-
-    for (double f : { 1000.0, 3000.0, 200.0 })
+    for (float mode : { 1.0f, 2.0f }) // Linear Phase and Linear Phase HD
     {
-        const auto a = sineGainDb (zero, f, block), b = sineGainDb (linear, f, block);
-        INFO (f << " Hz: zero latency " << a << " dB, linear phase " << b << " dB");
-        CHECK (b == Catch::Approx (a).margin (0.2));
-        if (f == 1000.0)
-            CHECK (b == Catch::Approx (6.0).margin (0.1));
+        PluginProcessor zero, linear;
+        configure (zero, 0.0f);
+        configure (linear, mode);
+        REQUIRE (waitForFilter (linear, block));
+
+        for (double f : { 1000.0, 3000.0, 200.0 })
+        {
+            const auto a = sineGainDb (zero, f, block), b = sineGainDb (linear, f, block);
+            INFO ("mode " << mode << ", " << f << " Hz: zero latency " << a << " dB, linear phase " << b << " dB");
+            CHECK (b == Catch::Approx (a).margin (0.2));
+            if (f == 1000.0)
+                CHECK (b == Catch::Approx (6.0).margin (0.1));
+        }
     }
 }
