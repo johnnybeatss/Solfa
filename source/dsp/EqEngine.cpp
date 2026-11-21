@@ -41,7 +41,7 @@ namespace solfa::dsp
 
         log2Freq.setTargetValue (std::log2 (std::max (t.frequencyHz, 1.0)));
         log2Q.setTargetValue (std::log2 (std::max (t.q, 0.01)));
-        gainDb.setTargetValue (enabled && isGainType() ? t.gainDb * amount : 0.0);
+        gainDb.setTargetValue (enabled && isGainType() ? snapToUnity (t.gainDb * amount) : 0.0);
         cutMix.setTargetValue (enabled && ! isGainType() ? 1.0 : 0.0);
 
         if (firstTarget)

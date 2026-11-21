@@ -11,6 +11,16 @@ namespace solfa::dsp
     inline constexpr int numBands = 8;
     inline constexpr int maxChannels = 2;
 
+    // Gains closer to 0 dB than this are treated as exactly 0 dB. Parameter snapping can turn a
+    // "0 dB" default into about -5e-7 dB on CPUs that fuse multiply-add (e.g. Apple Silicon),
+    // which would otherwise break bit-exact transparency.
+    inline constexpr double unityToleranceDb = 1.0e-3;
+
+    inline double snapToUnity (double gainDb) noexcept
+    {
+        return std::abs (gainDb) < unityToleranceDb ? 0.0 : gainDb;
+    }
+
     struct BandTarget
     {
         bool enabled = false;

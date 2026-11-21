@@ -30,7 +30,8 @@ void PluginProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     dry.setSize (juce::jmax (1, numChannels), juce::jmax (samplesPerBlock, 512));
 
     outputGain.reset (sampleRate, gainSmoothingSeconds);
-    outputGain.setCurrentAndTargetValue (juce::Decibels::decibelsToGain (handles.outputGain->load()));
+    outputGain.setCurrentAndTargetValue (
+        juce::Decibels::decibelsToGain ((float) solfa::dsp::snapToUnity (handles.outputGain->load())));
     compareMix.reset (sampleRate, gainSmoothingSeconds);
     compareMix.setCurrentAndTargetValue (handles.compare->load() >= 0.5f ? 1.0f : 0.0f);
     matchGain.reset (sampleRate, matchSmoothingSeconds);
@@ -98,7 +99,8 @@ void PluginProcessor::processChunk (juce::AudioBuffer<float>& buffer) noexcept
                    ? juce::jlimit (-maxCompensationDb, maxCompensationDb, -curveLoudnessDb)
                    : 0.0;
 
-    outputGain.setTargetValue (juce::Decibels::decibelsToGain ((float) (handles.outputGain->load() + autoGainDb)));
+    const auto totalDb = solfa::dsp::snapToUnity (handles.outputGain->load() + autoGainDb);
+    outputGain.setTargetValue (juce::Decibels::decibelsToGain ((float) totalDb));
 
     // Unity and not ramping: leave the audio untouched (keeps the flat setting bit-exact).
     if (outputGain.isSmoothing() || ! juce::exactlyEqual (outputGain.getTargetValue(), 1.0f))

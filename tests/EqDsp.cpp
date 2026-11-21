@@ -293,3 +293,22 @@ TEST_CASE ("Fast automation does not click", "[engine][automation]")
     INFO ("max second difference " << maxSecondDiff << ", smooth-signal limit " << smoothLimit);
     CHECK (maxSecondDiff < 2.0 * smoothLimit);
 }
+
+TEST_CASE ("Gains within 0.001 dB of zero count as exactly zero", "[engine][null]")
+{
+    // Guards the Apple Silicon case where parameter snapping yields about -5e-7 dB for "0 dB".
+    EqEngine engine;
+    engine.prepare (48000, 512, 2);
+    engine.setBand (2, bell (700, -5.364418e-7, 1));
+
+    juce::AudioBuffer<float> buffer (2, 512);
+    for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < 512; ++i)
+            buffer.setSample (ch, i, 0.4f * std::sin (0.02f * (float) i));
+    const auto input = buffer;
+    engine.process (buffer);
+
+    CHECK (engine.isBypassed());
+    for (int i = 0; i < 512; ++i)
+        REQUIRE (juce::exactlyEqual (buffer.getSample (0, i), input.getSample (0, i)));
+}
