@@ -1,4 +1,6 @@
 #include "PluginProcessor.h"
+#include "Presets.h"
+#include "dsp/Tuning.h"
 
 namespace
 {
@@ -25,6 +27,7 @@ void PluginProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     lastCurveVersion = engine.getVersion() + 1; // force a first estimate
     curveLoudnessDb = autoGainDb = 0.0;
 
+    resonator.prepare (sampleRate, numChannels);
     inputMeter.prepare (sampleRate, numChannels);
     outputMeter.prepare (sampleRate, numChannels);
     dry.setSize (juce::jmax (1, numChannels), juce::jmax (samplesPerBlock, 512));
@@ -61,6 +64,28 @@ void PluginProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Midi
         engine.setBand (b, handles.bands[(size_t) b].read());
     engine.setAmount (handles.amount->load() / 100.0);
 
+    // Focus frequency: Key Snap onto the chosen key/scale unless Pure is on.
+    solfa::dsp::Tuning tuning;
+    const auto refIndex = juce::jlimit (0, (int) solfa::dsp::referenceOptionsHz.size() - 1, (int) handles.tuneRef->load());
+    tuning.referenceA4 = solfa::dsp::referenceOptionsHz[(size_t) refIndex];
+    tuning.keyRoot = juce::jlimit (0, 11, (int) handles.key->load());
+    tuning.scale = (solfa::dsp::Scale) juce::jlimit (0, solfa::dsp::numScales - 1, (int) handles.scale->load());
+    const double focusHz = handles.focus->load();
+    const auto focus = handles.pure->load() >= 0.5f ? focusHz : solfa::dsp::snapToScale (focusHz, tuning);
+    effectiveFocusHz.store (focus);
+
+    solfa::dsp::BandTarget literal;
+    literal.enabled = true; // 0 dB means identity, so the band switches itself off
+    literal.type = solfa::dsp::FilterType::bell;
+    literal.frequencyHz = focus;
+    literal.gainDb = handles.literal->load();
+    literal.q = literalQ;
+    engine.setLiteral (literal);
+
+    resonator.setFocus (focus);
+    resonator.setDecaySeconds (handles.resDecay->load());
+    resonator.setAmount (handles.resAmount->load() / 100.0);
+
     // Work in chunks no larger than the preallocated dry buffer (no allocation here).
     const auto numChannels = juce::jmin (getTotalNumInputChannels(), dry.getNumChannels());
     for (int start = 0; start < buffer.getNumSamples(); start += dry.getNumSamples())
@@ -84,8 +109,9 @@ void PluginProcessor::processChunk (juce::AudioBuffer<float>& buffer) noexcept
         for (int ch = 0; ch < numChannels; ++ch)
             dry.copyFrom (ch, 0, buffer, ch, 0, numSamples);
 
-    // 2. EQ
+    // 2. EQ, then Resonance (excited by the EQ'd signal)
     engine.process (buffer);
+    resonator.process (buffer);
 
     // 3. Output gain + static auto gain (re-estimated only when the curve changes)
     if (engine.getVersion() != lastCurveVersion)
@@ -101,6 +127,8 @@ void PluginProcessor::processChunk (juce::AudioBuffer<float>& buffer) noexcept
 
     const auto totalDb = solfa::dsp::snapToUnity (handles.outputGain->load() + autoGainDb);
     outputGain.setTargetValue (juce::Decibels::decibelsToGain ((float) totalDb));
+    if (snapOutputGain.exchange (false))
+        outputGain.setCurrentAndTargetValue (outputGain.getTargetValue());
 
     // Unity and not ramping: leave the audio untouched (keeps the flat setting bit-exact).
     if (outputGain.isSmoothing() || ! juce::exactlyEqual (outputGain.getTargetValue(), 1.0f))
@@ -136,6 +164,29 @@ void PluginProcessor::processChunk (juce::AudioBuffer<float>& buffer) noexcept
     }
 }
 
+int PluginProcessor::getNumPrograms()
+{
+    return (int) solfa::presets::factory().size();
+}
+
+void PluginProcessor::setCurrentProgram (int index)
+{
+    const auto& all = solfa::presets::factory();
+    if (index < 0 || index >= (int) all.size())
+        return;
+
+    currentProgram = index;
+    solfa::presets::apply (all[(size_t) index], state);
+    engine.requestSnap(); // presets jump, they don't sweep
+    snapOutputGain.store (true);
+}
+
+const juce::String PluginProcessor::getProgramName (int index)
+{
+    const auto& all = solfa::presets::factory();
+    return index >= 0 && index < (int) all.size() ? all[(size_t) index].name : juce::String();
+}
+
 juce::AudioProcessorEditor* PluginProcessor::createEditor()
 {
     // Temporary until the real UI (Phase 5): JUCE's generic editor lists every parameter,
@@ -152,8 +203,24 @@ void PluginProcessor::getStateInformation (juce::MemoryBlock& destData)
 void PluginProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     if (auto xml = getXmlFromBinary (data, sizeInBytes))
-        if (xml->hasTagName (state.state.getType()))
-            state.replaceState (juce::ValueTree::fromXml (*xml));
+    {
+        if (! xml->hasTagName (state.state.getType()))
+            return;
+
+        state.replaceState (juce::ValueTree::fromXml (*xml));
+
+        // APVTS skips a parameter whose value already "means" the restored value. A host can leave
+        // a bool at, say, 0.43 (= off); restoring "off" would then leave the raw 0.43 in place.
+        // Push every parameter that is not exactly at its restored value.
+        for (auto* p : getParameters())
+            if (auto* ranged = dynamic_cast<juce::RangedAudioParameter*> (p))
+                if (auto* raw = state.getRawParameterValue (ranged->paramID))
+                {
+                    const auto target = ranged->convertTo0to1 (raw->load());
+                    if (! juce::approximatelyEqual (ranged->getValue(), target))
+                        ranged->setValueNotifyingHost (target);
+                }
+    }
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()

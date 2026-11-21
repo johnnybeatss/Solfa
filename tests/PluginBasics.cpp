@@ -120,3 +120,18 @@ TEST_CASE ("Editor opens and closes", "[editor]")
         REQUIRE (plugin.getActiveEditor() != nullptr);
     });
 }
+
+TEST_CASE ("State restore fixes bools a host left between 0 and 1", "[state]")
+{
+    // Reproduces pluginval's state-restoration failure: a bool at a raw 0.43 (= off) must read
+    // exactly 0 after restoring a state where it was off.
+    PluginProcessor plugin;
+    juce::MemoryBlock blob;
+    plugin.getStateInformation (blob); // band 2 is off by default
+
+    auto* on = plugin.getState().getParameter (solfa::params::bandId (1, solfa::params::on));
+    REQUIRE (on != nullptr);
+    on->setValueNotifyingHost (0.43f);
+    plugin.setStateInformation (blob.getData(), (int) blob.getSize());
+    CHECK (on->getValue() == 0.0f);
+}

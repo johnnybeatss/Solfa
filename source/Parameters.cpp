@@ -114,6 +114,39 @@ namespace solfa::params
             juce::ParameterID { compare, 1 }, "Compare (level-matched bypass)", false,
             juce::AudioParameterBoolAttributes().withAutomatable (false)));
 
+        // Focus, Key Snap, Literal, Resonance
+        layout.add (std::make_unique<juce::AudioParameterFloat> (
+            juce::ParameterID { focus, 1 }, "Focus", logRange (100.0f, 2000.0f), 528.0f,
+            juce::AudioParameterFloatAttributes().withStringFromValueFunction (formatHz)));
+
+        layout.add (std::make_unique<juce::AudioParameterBool> (
+            juce::ParameterID { pure, 1 }, "Pure (exact focus, no Key Snap)", false));
+
+        layout.add (std::make_unique<juce::AudioParameterChoice> (
+            juce::ParameterID { tuneRef, 1 }, "Tuning Reference",
+            juce::StringArray { "A = 440 Hz", "A = 432 Hz", "A = 444 Hz" }, 0));
+
+        layout.add (std::make_unique<juce::AudioParameterChoice> (
+            juce::ParameterID { key, 1 }, "Key",
+            juce::StringArray { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" }, 0));
+
+        layout.add (std::make_unique<juce::AudioParameterChoice> (
+            juce::ParameterID { scale, 1 }, "Scale", juce::StringArray { "Chromatic", "Major", "Minor" }, 0));
+
+        layout.add (std::make_unique<juce::AudioParameterFloat> (
+            juce::ParameterID { literal, 1 }, "Literal Boost",
+            juce::NormalisableRange<float> (0.0f, 3.0f, 0.01f), 0.0f,
+            juce::AudioParameterFloatAttributes().withLabel ("dB")));
+
+        layout.add (std::make_unique<juce::AudioParameterFloat> (
+            juce::ParameterID { resAmount, 1 }, "Resonance",
+            juce::NormalisableRange<float> (0.0f, 100.0f, 0.1f), 0.0f,
+            juce::AudioParameterFloatAttributes().withLabel ("%")));
+
+        layout.add (std::make_unique<juce::AudioParameterFloat> (
+            juce::ParameterID { resDecay, 1 }, "Resonance Decay", logRange (0.2f, 5.0f), 1.5f,
+            juce::AudioParameterFloatAttributes().withLabel ("s")));
+
         layout.add (std::make_unique<juce::AudioParameterFloat> (
             juce::ParameterID { outputGain, 1 }, "Output",
             juce::NormalisableRange<float> (-24.0f, 24.0f, 0.01f), 0.0f,
@@ -148,6 +181,14 @@ namespace solfa::params
         amount = get (params::amount);
         autoGain = get (params::autoGain);
         compare = get (params::compare);
+        focus = get (params::focus);
+        pure = get (params::pure);
+        tuneRef = get (params::tuneRef);
+        key = get (params::key);
+        scale = get (params::scale);
+        literal = get (params::literal);
+        resAmount = get (params::resAmount);
+        resDecay = get (params::resDecay);
 
         for (int b = 0; b < dsp::numBands; ++b)
         {

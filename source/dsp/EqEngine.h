@@ -4,6 +4,7 @@
 #include "FilterDesign.h"
 
 #include <array>
+#include <atomic>
 #include <juce_audio_basics/juce_audio_basics.h>
 
 namespace solfa::dsp
@@ -54,6 +55,9 @@ namespace solfa::dsp
         // Called once per block from the audio thread.
         void setTarget (const BandTarget& target, double amount) noexcept;
 
+        // Jumps every smoothed value to its target (preset loads).
+        void snapToTarget() noexcept;
+
         // Advances smoothing by numSamples and refreshes coefficients if anything moved.
         void advance (int numSamples) noexcept;
 
@@ -74,7 +78,6 @@ namespace solfa::dsp
     private:
         bool isGainType() const noexcept;
         void updateCoefficients() noexcept;
-        void snapToTarget() noexcept;
         bool filtersSilent() const noexcept;
         void resetFilters() noexcept;
         double runChain (int channel, double x) noexcept;
@@ -111,6 +114,12 @@ namespace solfa::dsp
         void reset();
 
         void setBand (int index, const BandTarget& target) noexcept { targets[(size_t) index] = target; }
+
+        // Literal mode: an extra narrow band outside the 24 user bands.
+        void setLiteral (const BandTarget& target) noexcept { literalTarget = target; }
+
+        // Next process() jumps straight to the targets instead of ramping (preset loads).
+        void requestSnap() noexcept { snapRequested.store (true); }
         void setAmount (double amountFraction) noexcept { amount = amountFraction; }
 
         void process (juce::AudioBuffer<float>& buffer) noexcept;
@@ -130,8 +139,11 @@ namespace solfa::dsp
         double getSampleRate() const noexcept { return sampleRate; }
 
     private:
-        std::array<EqBand, numBands> bands;
+        // bands[numBands] is the Literal band.
+        std::array<EqBand, numBands + 1> bands;
         std::array<BandTarget, numBands> targets;
+        BandTarget literalTarget;
+        std::atomic<bool> snapRequested { false };
         double amount = 1.0;
         double sampleRate = 48000.0;
         int channels = 2;

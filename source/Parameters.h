@@ -12,6 +12,16 @@ namespace solfa::params
     inline constexpr auto autoGain = "autoGain"; // static loudness compensation from the curve
     inline constexpr auto compare = "compare";   // loudness-matched bypass for honest A/B
 
+    // Phase 5: focus frequency, Key Snap, Literal and Resonance
+    inline constexpr auto focus = "focus";         // the preset's named number, in Hz
+    inline constexpr auto pure = "pure";           // true: use focus exactly; false: Key Snap it
+    inline constexpr auto tuneRef = "tuneRef";     // A4 reference: 440 / 432 / 444
+    inline constexpr auto key = "key";             // C .. B
+    inline constexpr auto scale = "scale";         // Chromatic / Major / Minor
+    inline constexpr auto literal = "literal";     // narrow boost at the focus frequency, 0-3 dB
+    inline constexpr auto resAmount = "resAmount"; // Resonance level, %
+    inline constexpr auto resDecay = "resDecay";   // Resonance ring time, s
+
     // Per-band IDs: "b1_on", "b1_type", "b1_freq", "b1_gain", "b1_q" ... "b8_q"
     juce::String bandId (int bandIndex, const char* suffix);
 
@@ -47,6 +57,14 @@ namespace solfa::params
         std::atomic<float>* amount = nullptr;
         std::atomic<float>* autoGain = nullptr;
         std::atomic<float>* compare = nullptr;
+        std::atomic<float>* focus = nullptr;
+        std::atomic<float>* pure = nullptr;
+        std::atomic<float>* tuneRef = nullptr;
+        std::atomic<float>* key = nullptr;
+        std::atomic<float>* scale = nullptr;
+        std::atomic<float>* literal = nullptr;
+        std::atomic<float>* resAmount = nullptr;
+        std::atomic<float>* resDecay = nullptr;
         std::array<BandHandles, dsp::numBands> bands;
     };
 }

@@ -16,6 +16,11 @@ unprocessed sound at the same loudness so you can judge the tone, not the volume
 
 **Phase 4 (bands & shapes)**: 24 bands, notch and band-pass shapes, 6-96 dB/oct cut slopes, and
 per-band Stereo / Left / Right / Mid / Side placement. Full plan: [`docs/roadmap.md`](docs/roadmap.md).
+
+**Phase 5 (presets & Resonance)**: 10 factory presets named after the solfeggio / 432 Hz numbers,
+a Focus frequency with Key Snap (A = 440 / 432 / 444, key, scale) or Pure, a Literal boost, and
+Resonance: tuned resonators that ring at the Focus and its octaves with your music. Presets show
+up in your DAW's preset list. Details: [`docs/presets.md`](docs/presets.md).
 There is no custom UI yet: the plugin shows a plain list of its parameters until Phase 5.
 
 | Format | Platforms | DAWs |

@@ -6,8 +6,8 @@
 | 2 | EQ engine: analog-matched filters, smoothing, Amount | Done |
 | 3 | Auto Gain, level-matched Compare | Done |
 | 4 | Bands & shapes: 24 bands, notch, band-pass, 6-96 dB/oct cuts, per-band Stereo/Left/Right/Mid/Side | Done |
-| 5 | Presets (solfeggio-named), Key Snap, Literal mode, **Resonance** | Next |
-| 6 | Dynamic EQ (per-band threshold / range / attack / release) | |
+| 5 | Presets (solfeggio-named), Key Snap, Literal mode, **Resonance** | Done (see `docs/presets.md`) |
+| 6 | Dynamic EQ (per-band threshold / range / attack / release) | Next |
 | 7 | Interface: draggable curve, analyser, Spectrum Grab, solfeggio markers, "About the science" | |
 | 8 | Linear-phase mode | |
 | 9 | EQ Match (copy a reference track's tonal balance) | |

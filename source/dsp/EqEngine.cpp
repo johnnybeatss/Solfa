@@ -246,6 +246,11 @@ namespace solfa::dsp
 
         for (int i = 0; i < numBands; ++i)
             bands[(size_t) i].setTarget (targets[(size_t) i], amount);
+        bands[(size_t) numBands].setTarget (literalTarget, amount);
+
+        if (snapRequested.exchange (false))
+            for (auto& b : bands)
+                b.snapToTarget();
 
         double* ptrs[maxChannels] = { scratch[0].data(), scratch[1].data() };
 

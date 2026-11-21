@@ -3,6 +3,7 @@
 #include "Parameters.h"
 #include "dsp/EqEngine.h"
 #include "dsp/Loudness.h"
+#include "dsp/Resonator.h"
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
@@ -26,11 +27,11 @@ public:
     bool isMidiEffect() const override { return false; }
     double getTailLengthSeconds() const override { return 0.0; }
 
-    // Hosts cope badly with zero programs; presets are handled separately (Phase 4).
-    int getNumPrograms() override { return 1; }
-    int getCurrentProgram() override { return 0; }
-    void setCurrentProgram (int) override {}
-    const juce::String getProgramName (int) override { return "Default"; }
+    // Factory presets are exposed as host programs (a preset browser arrives with the UI).
+    int getNumPrograms() override;
+    int getCurrentProgram() override { return currentProgram; }
+    void setCurrentProgram (int index) override;
+    const juce::String getProgramName (int index) override;
     void changeProgramName (int, const juce::String&) override {}
 
     void getStateInformation (juce::MemoryBlock& destData) override;
@@ -41,6 +42,12 @@ public:
 
     // Current static auto-gain compensation in dB (0 when Auto Gain is off or the EQ is flat).
     double getAutoGainDb() const noexcept { return autoGainDb; }
+
+    // Focus frequency after Key Snap (or exact when Pure is on), as used by Literal and Resonance.
+    double getEffectiveFocusHz() const noexcept { return effectiveFocusHz.load(); }
+
+    // Literal mode band width (deliberately narrow: the one place presets may go narrow).
+    static constexpr double literalQ = 6.0;
 
 private:
     void processChunk (juce::AudioBuffer<float>& buffer) noexcept;
@@ -61,6 +68,12 @@ private:
     juce::AudioBuffer<float> dry;
     juce::SmoothedValue<float> compareMix { 0.0f };
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Multiplicative> matchGain { 1.0f };
+
+    // Phase 5
+    solfa::dsp::Resonator resonator;
+    std::atomic<double> effectiveFocusHz { 528.0 };
+    std::atomic<bool> snapOutputGain { false };
+    int currentProgram = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginProcessor)
 };
