@@ -10,8 +10,8 @@
 | 6 | Dynamic EQ (per-band threshold / range / attack / release) | Done |
 | 7 | Interface: draggable curve, analyser, Spectrum Grab, solfeggio markers, "About the science" | Done |
 | 8 | Linear-phase mode | Done |
-| 9 | EQ Match (copy a reference track's tonal balance) | Next |
-| 10 | DAW testing and beta | |
+| 9 | EQ Match (copy a reference track's tonal balance) | Done |
+| 10 | DAW testing and beta | Next |
 
 ## Resonance (Phase 5)
 

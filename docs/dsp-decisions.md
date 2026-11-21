@@ -161,3 +161,20 @@ low-frequency detail). FIR length scales with sample rate to keep the same resol
 bands act as stereo bands (one FIR for both channels); the display says so when it applies.
 Switching mode changes latency, which some hosts handle with a brief glitch. Linear phase
 pre-rings before sharp transients, which is why it is not the default.
+
+## EQ Match (Phase 9)
+
+- **Capture:** long-term average power spectra (Hann-windowed 8192-point FFT, 50% overlap) of a
+  reference (an audio file analysed on a background thread, up to 10 minutes, or audio played
+  through Solfa) and of the current material (Solfa's input, before any processing).
+- **Target:** reference minus current on a 160-point log grid (20 Hz-20 kHz), each smoothed over
+  1/3, 1/6 or 1/12 octave, normalised so the 100 Hz-10 kHz average is 0 dB (tonal balance, not
+  level), clamped to ±12 dB and scaled by Amount.
+- **Fit:** greedy placement (largest weighted deviation -> bell at that frequency with Q from its
+  half-height width, or a shelf when the deviation runs off either end), then three passes of
+  weighted least squares on all band gains together. Bands are ordinary Solfa bands (Q 0.3-4,
+  gain ±12 dB) written into free slots; applying again replaces the bands Match created last
+  time.
+- **Measured:** a known 3-band curve is fitted with 3 bands to 0.05 dB RMS; white noise EQ'd with a
+  known curve and matched against plain noise recovers that curve to 0.20 dB RMS (7 bands), and
+  through the plugin's own Apply to 0.24 dB RMS (5 bands).

@@ -36,6 +36,11 @@ browser and an "About the science" panel.
 | Right-click a node | Shape, slope, stereo placement, Dynamic, remove |
 | Alt-click | Spectrum Grab: add a band on the nearest peak in the analyser |
 
+**Phase 9 (EQ Match)**: load a reference track (or play one through Solfa), play your own
+track, and Solfa fits normal bands that give yours the reference's tonal balance.
+
+![EQ Match](docs/images/match.png)
+
 **Phase 8 (linear phase)**: a Phase selector (Zero Latency / Linear Phase / Linear Phase HD) for
 mastering-style EQ without phase shift. Latency is reported to your DAW, which compensates.
 

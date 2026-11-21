@@ -4,7 +4,7 @@
 using namespace solfa;
 
 PluginEditor::PluginEditor (PluginProcessor& p)
-    : AudioProcessorEditor (&p), solfaProcessor (p), display (p), bandPanel (p.getState()), spiritPanel (p)
+    : AudioProcessorEditor (&p), solfaProcessor (p), display (p), bandPanel (p.getState()), spiritPanel (p), matchPanel (p)
 {
     setLookAndFeel (&lookAndFeel);
 
@@ -35,7 +35,7 @@ PluginEditor::PluginEditor (PluginProcessor& p)
     autoGainAttachment = std::make_unique<ui::APVTS::ButtonAttachment> (p.getState(), params::autoGain, autoGain);
     compareAttachment = std::make_unique<ui::APVTS::ButtonAttachment> (p.getState(), params::compare, compare);
     outputAttachment = std::make_unique<ui::APVTS::SliderAttachment> (p.getState(), params::outputGain, output);
-    output.setTextBoxStyle (juce::Slider::TextBoxRight, false, 64, 20);
+    output.setTextBoxStyle (juce::Slider::TextBoxRight, false, 58, 20);
     output.setTextValueSuffix (" dB");
     output.setColour (juce::Slider::thumbColourId, ui::theme::curve);
     output.setColour (juce::Slider::trackColourId, ui::theme::panelEdge);
@@ -43,16 +43,19 @@ PluginEditor::PluginEditor (PluginProcessor& p)
     output.setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
     outputLabel.setJustificationType (juce::Justification::centredRight);
     science.onClick = [this] { sciencePanel.setVisible (true); sciencePanel.toFront (false); };
+    matchButton.setTooltip ("EQ Match: copy the tonal balance of a reference track");
+    matchButton.onClick = [this] { matchPanel.setVisible (true); matchPanel.toFront (false); };
 
     display.onSelectionChanged = [this] (int band) { bandPanel.showBand (band); };
 
     for (juce::Component* c : std::initializer_list<juce::Component*> { &presetBox, &prevPreset, &nextPreset, &phaseBox, &autoGain, &compare,
-             &science, &output, &outputLabel, &display, &bandPanel, &spiritPanel })
+             &science, &matchButton, &output, &outputLabel, &display, &bandPanel, &spiritPanel })
         addAndMakeVisible (c);
     addChildComponent (sciencePanel);
+    addChildComponent (matchPanel);
 
     setResizable (true, true);
-    setResizeLimits (860, 560, 1800, 1150);
+    setResizeLimits (1000, 600, 1800, 1150); // narrower than 1000 px the top bar no longer fits
     setSize (1040, 680);
     startTimerHz (5); // keeps the preset box in sync with host-side preset changes
 }
@@ -85,14 +88,16 @@ void PluginEditor::resized()
     auto top = r.removeFromTop (48).reduced (8, 8);
     top.removeFromLeft (140);
     prevPreset.setBounds (top.removeFromLeft (28));
-    presetBox.setBounds (top.removeFromLeft (220).reduced (4, 0));
+    presetBox.setBounds (top.removeFromLeft (180).reduced (4, 0));
     nextPreset.setBounds (top.removeFromLeft (28));
     top.removeFromLeft (12);
-    phaseBox.setBounds (top.removeFromLeft (150));
+    phaseBox.setBounds (top.removeFromLeft (130));
     science.setBounds (top.removeFromRight (32));
     top.removeFromRight (8);
-    output.setBounds (top.removeFromRight (170));
-    outputLabel.setBounds (top.removeFromRight (50));
+    matchButton.setBounds (top.removeFromRight (70));
+    top.removeFromRight (8);
+    output.setBounds (top.removeFromRight (124));
+    outputLabel.setBounds (top.removeFromRight (46));
     top.removeFromRight (8);
     compare.setBounds (top.removeFromRight (90));
     top.removeFromRight (8);
@@ -103,5 +108,6 @@ void PluginEditor::resized()
     spiritPanel.setBounds (bottom.withTrimmedLeft (4));
 
     display.setBounds (r.reduced (8, 0));
+    matchPanel.setBounds (display.getBounds());
     sciencePanel.setBounds (getLocalBounds());
 }

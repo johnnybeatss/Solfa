@@ -50,6 +50,8 @@ public:
 
     // Output (mono mix) for the analyser in the editor.
     solfa::dsp::AnalyzerFifo& getAnalyzerFifo() noexcept { return analyzerFifo; }
+    // Input (before any processing), for EQ Match's "learn" capture.
+    solfa::dsp::AnalyzerFifo& getInputFifo() noexcept { return inputFifo; }
 
     // Linear-phase mode (Phase parameter). Exposed for tests and the UI.
     solfa::dsp::LinearPhaseEq& getLinearPhase() noexcept { return linearPhase; }
@@ -85,7 +87,7 @@ private:
     std::atomic<bool> snapOutputGain { false };
     int currentProgram = 0;
 
-    solfa::dsp::AnalyzerFifo analyzerFifo;
+    solfa::dsp::AnalyzerFifo analyzerFifo, inputFifo;
 
     solfa::dsp::LinearPhaseEq linearPhase;
     int reportedPhaseMode = -1;

@@ -2,6 +2,7 @@
 
 #include "PluginProcessor.h"
 #include "ui/EqDisplay.h"
+#include "ui/MatchPanel.h"
 #include "ui/Panels.h"
 #include "ui/Theme.h"
 
@@ -15,6 +16,7 @@ public:
     void resized() override;
 
     solfa::ui::EqDisplay& getDisplay() noexcept { return display; }
+    solfa::ui::MatchPanel& getMatchPanel() noexcept { return matchPanel; }
 
 private:
     void refreshPresetBox();
@@ -29,7 +31,7 @@ private:
     juce::ToggleButton autoGain { "Auto Gain" };
     juce::ComboBox phaseBox;
     std::unique_ptr<solfa::ui::APVTS::ComboBoxAttachment> phaseAttachment;
-    juce::TextButton compare { "Compare" }, science { "?" };
+    juce::TextButton compare { "Compare" }, science { "?" }, matchButton { "Match" };
     juce::Slider output { juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight };
     juce::Label outputLabel { {}, "Output" };
     std::unique_ptr<solfa::ui::APVTS::SliderAttachment> outputAttachment;
@@ -39,6 +41,7 @@ private:
     solfa::ui::BandPanel bandPanel;
     solfa::ui::SpiritPanel spiritPanel;
     solfa::ui::SciencePanel sciencePanel;
+    solfa::ui::MatchPanel matchPanel;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginEditor)
 };

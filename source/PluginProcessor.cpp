@@ -105,6 +105,8 @@ void PluginProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Midi
     for (auto ch = getTotalNumInputChannels(); ch < getTotalNumOutputChannels(); ++ch)
         buffer.clear (ch, 0, buffer.getNumSamples());
 
+    inputFifo.push (buffer);
+
     for (int b = 0; b < solfa::dsp::numBands; ++b)
         engine.setBand (b, handles.bands[(size_t) b].read());
     engine.setAmount (handles.amount->load() / 100.0);
