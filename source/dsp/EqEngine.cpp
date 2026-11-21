@@ -39,14 +39,75 @@ namespace solfa::dsp
         return true;
     }
 
-    bool EqBand::isGainType() const noexcept
+    bool EqBand::isGainType() const noexcept { return isGainTypeFor (type); }
+
+    double EqBand::levelToOffsetDb() const noexcept
     {
-        return type == FilterType::bell || type == FilterType::lowShelf
-            || type == FilterType::highShelf || type == FilterType::tilt;
+        const auto levelDb = 10.0 * std::log10 (meanSquare + 1.0e-30);
+        const auto amountOver = std::clamp ((levelDb - thresholdDb) / dynamicKneeSpanDb, 0.0, 1.0);
+        return rangeDb * amountOver;
+    }
+
+    void EqBand::updateSidechain() noexcept
+    {
+        // The detector listens to the band's own region: band-pass for bells and tilt,
+        // low-pass for low shelves, high-pass for high shelves.
+        BandSettings s;
+        s.frequencyHz = std::exp2 (log2Freq.getCurrentValue());
+        s.q = std::clamp (std::exp2 (log2Q.getCurrentValue()), 0.3, 18.0);
+        s.type = type == FilterType::lowShelf ? FilterType::highCut
+               : type == FilterType::highShelf ? FilterType::lowCut
+                                                : FilterType::bandPass;
+        if (s.type != FilterType::bandPass)
+            s.q = 0.7071;
+        const auto c = designBilinear (sanitise (s, sampleRate), sampleRate);
+        for (auto& f : sidechain)
+            f.setCoefficients (c);
+
+        // RMS averaging over about two periods of the band frequency (1-20 ms), so the detector
+        // reads the average level rather than riding each waveform peak.
+        const auto rmsSeconds = std::clamp (2.0 / s.frequencyHz, 0.001, 0.02);
+        rmsCoeff = 1.0 - std::exp (-1.0 / (rmsSeconds * sampleRate));
+    }
+
+    double EqBand::detectorPower (double* const* ch, int numChannels, int i) noexcept
+    {
+        if (numChannels < 2)
+        {
+            const auto y = sidechain[0].process (ch[0][i]);
+            return y * y;
+        }
+        switch (placement)
+        {
+            case StereoPlacement::stereo:
+            {
+                const auto l = sidechain[0].process (ch[0][i]);
+                const auto r = sidechain[1].process (ch[1][i]);
+                return 0.5 * (l * l + r * r);
+            }
+            case StereoPlacement::left: { const auto y = sidechain[0].process (ch[0][i]); return y * y; }
+            case StereoPlacement::right: { const auto y = sidechain[1].process (ch[1][i]); return y * y; }
+            case StereoPlacement::mid: { const auto y = sidechain[0].process (0.5 * (ch[0][i] + ch[1][i])); return y * y; }
+            case StereoPlacement::side: { const auto y = sidechain[0].process (0.5 * (ch[0][i] - ch[1][i])); return y * y; }
+        }
+        return 0.0;
     }
 
     void EqBand::setTarget (const BandTarget& t, double amount) noexcept
     {
+        const bool wantDynamic = t.enabled && t.dynamic && isGainTypeFor (t.type);
+        if (wantDynamic != dynamic)
+        {
+            dynamic = wantDynamic;
+            meanSquare = smoothedOffsetDb = 0.0;
+            for (auto& s : sidechain)
+                s.reset();
+        }
+        thresholdDb = t.dynThresholdDb;
+        rangeDb = t.dynRangeDb * amount;
+        attackMs = std::max (t.dynAttackMs, 0.1);
+        releaseMs = std::max (t.dynReleaseMs, 1.0);
+
         if (t.type != type || t.slopeDbPerOct != slopeDbPerOct)
         {
             type = t.type;
@@ -93,8 +154,27 @@ namespace solfa::dsp
             coefficientsDirty = true;
         }
 
+        // Attack/release act on the gain change itself (in dB), like a compressor's gain smoothing:
+        // attack while the band moves towards its range, release while it returns.
+        double newOffset = 0.0;
+        if (dynamic)
+        {
+            const auto target = levelToOffsetDb();
+            const bool engaging = std::abs (target) > std::abs (smoothedOffsetDb);
+            const auto timeMs = engaging ? attackMs : releaseMs;
+            const auto coeff = 1.0 - std::exp (-numSamples / (timeMs * 1.0e-3 * sampleRate));
+            smoothedOffsetDb += coeff * (target - smoothedOffsetDb);
+            newOffset = snapToUnity (smoothedOffsetDb);
+        }
+        const bool dynamicMoved = std::abs (newOffset - dynOffsetDb) > 0.01
+                               || (newOffset == 0.0 && dynOffsetDb != 0.0);
+        if (dynamicMoved)
+            dynOffsetDb = newOffset;
+
         if (coefficientsDirty)
-            updateCoefficients();
+            updateCoefficients (true);
+        else if (dynamicMoved)
+            updateCoefficients (false);
 
         bool nowActive;
         if (isGainType())
@@ -107,7 +187,7 @@ namespace solfa::dsp
         active = nowActive;
     }
 
-    void EqBand::updateCoefficients() noexcept
+    void EqBand::updateCoefficients (bool shapeChanged) noexcept
     {
         BandSettings s;
         s.type = type;
@@ -115,13 +195,40 @@ namespace solfa::dsp
         s.q = std::exp2 (log2Q.getCurrentValue());
         s.gainDb = gainDb.getCurrentValue();
 
-        cascade = designCascade (s, slopeDbPerOct, sampleRate);
+        if (shapeChanged)
+        {
+            if (isGainType())
+            {
+                // Choose the matched fit once per shape; dynamic gain changes reuse it (fast path).
+                matchCandidate = chooseMatchCandidate (s, sampleRate);
+                staticCascade = {};
+                staticCascade.sections[0] = designWithCandidate (s, sampleRate, matchCandidate);
+                updateSidechain();
+            }
+            else
+            {
+                staticCascade = designCascade (s, slopeDbPerOct, sampleRate);
+            }
+            ++version; // auto-gain follows the static curve only
+        }
+
+        if (isGainType() && dynOffsetDb != 0.0)
+        {
+            auto moving = s;
+            moving.gainDb = s.gainDb + dynOffsetDb;
+            cascade = {};
+            cascade.sections[0] = designWithCandidate (moving, sampleRate, matchCandidate);
+        }
+        else
+        {
+            cascade = staticCascade;
+        }
+
         for (auto& channel : filters)
             for (int i = 0; i < cascade.numSections; ++i)
                 channel[(size_t) i].setCoefficients (cascade.sections[(size_t) i]);
 
         coefficientsDirty = false;
-        ++version;
     }
 
     bool EqBand::contributesToCurve() const noexcept
@@ -141,6 +248,14 @@ namespace solfa::dsp
 
     void EqBand::process (double* const* ch, int numChannels, int numSamples) noexcept
     {
+        // The detector hears the band's input (before this band filters it). It runs even while
+        // the band is momentarily flat, so the band can wake up when its region gets loud.
+        if (dynamic)
+            for (int i = 0; i < numSamples; ++i)
+            {
+                meanSquare += rmsCoeff * (detectorPower (ch, numChannels, i) - meanSquare);
+            }
+
         if (! active)
             return;
 
@@ -218,9 +333,9 @@ namespace solfa::dsp
         double power = 1.0;
         for (const auto& b : bands)
         {
-            if (! b.contributesToCurve() || b.getCascade().isIdentity())
+            if (! b.contributesToCurve() || b.getStaticCascade().isIdentity())
                 continue;
-            const auto p = cascadePowerGain (b.getCascade(), frequencyHz, sampleRate);
+            const auto p = cascadePowerGain (b.getStaticCascade(), frequencyHz, sampleRate);
             power *= b.getPlacement() == StereoPlacement::stereo ? p : 0.5 * (1.0 + p);
         }
         return power;
@@ -262,7 +377,7 @@ namespace solfa::dsp
             for (auto& b : bands)
             {
                 b.advance (len);
-                anyActive = anyActive || b.isActive();
+                anyActive = anyActive || b.needsAudio();
             }
 
             if (! anyActive)

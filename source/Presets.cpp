@@ -73,7 +73,8 @@ namespace solfa::presets
     {
         // Start from defaults for every band, then write the preset's bands into the first slots.
         for (int b = 0; b < dsp::numBands; ++b)
-            for (auto* suffix : { params::on, params::type, params::freq, params::gain, params::q, params::slope, params::place })
+            for (auto* suffix : { params::on, params::type, params::freq, params::gain, params::q, params::slope, params::place,
+                                  params::dyn, params::thr, params::range, params::atk, params::rel })
                 setDefault (state, params::bandId (b, suffix));
 
         for (size_t i = 0; i < preset.bands.size() && i < (size_t) dsp::numBands; ++i)

@@ -105,3 +105,29 @@ coefficients published in BS.1770 to about 1e-15 and works at any sample rate.
   the right channel bit-for-bit untouched, a Mid band ignores pure side content and a Side band
   ignores mono content. Auto Gain counts one-channel and Mid/Side bands as affecting half the
   signal power (an approximation).
+
+## Dynamic EQ (Phase 6)
+
+Available on bell, shelf and tilt bands: **Dynamic** on/off, **Threshold**, **Range**, **Attack**,
+**Release**.
+
+- **Detector:** listens to the band's own region of the band's *input*: band-pass at the band
+  frequency and Q for bells and tilt, low-pass for low shelves, high-pass for high shelves,
+  following the band's stereo placement (Stereo averages both channels; Mid/Side detect M or S).
+  The level is an RMS average over about two periods of the band frequency (1-20 ms), so it
+  reads the average level rather than riding each waveform peak.
+- **Gain law:** as the level rises above Threshold the band's gain moves from its static gain
+  towards static + Range, reaching it 12 dB above Threshold (a soft, linear-in-dB knee).
+  Negative Range tames a region when it gets loud; positive Range lifts it. The Amount macro
+  scales Range as well as the static gain.
+- **Attack/Release** act on the gain change in dB, like a compressor's gain smoothing: attack
+  while the band moves towards its range, release while it returns.
+- **Cost control:** choosing the analog-matched fit is the expensive part of designing a band,
+  so a dynamic band chooses once per shape (type/frequency/Q/static gain) and reuses that
+  choice while only the dynamic gain moves. 24 dynamic bands with constantly moving gains cost
+  about 199 µs per 512-sample stereo block at 48 kHz (about 1.9% of the real-time budget).
+- **Auto Gain** follows the static curve only, so it does not pump with the dynamics.
+
+Measured (tests/DynamicEq.cpp): 20 dB over threshold gives exactly the Range (-6.00 dB, +4.00
+dB); 6 dB over gives half (-3.05 dB); 50 ms attack moves only -0.48 dB in the first 10 ms;
+300 ms release still holds -5.47 dB 30 ms after the signal drops.

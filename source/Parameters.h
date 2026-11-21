@@ -32,6 +32,11 @@ namespace solfa::params
     inline constexpr auto q = "q";
     inline constexpr auto slope = "slope"; // low/high cut steepness
     inline constexpr auto place = "place"; // Stereo / Left / Right / Mid / Side
+    inline constexpr auto dyn = "dyn";     // dynamic EQ on/off
+    inline constexpr auto thr = "thr";     // dynamic threshold, dBFS
+    inline constexpr auto range = "range"; // dynamic range, dB
+    inline constexpr auto atk = "atk";     // dynamic attack, ms
+    inline constexpr auto rel = "rel";     // dynamic release, ms
 
     juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
 
@@ -45,6 +50,11 @@ namespace solfa::params
         std::atomic<float>* q = nullptr;
         std::atomic<float>* slope = nullptr;
         std::atomic<float>* place = nullptr;
+        std::atomic<float>* dyn = nullptr;
+        std::atomic<float>* thr = nullptr;
+        std::atomic<float>* range = nullptr;
+        std::atomic<float>* atk = nullptr;
+        std::atomic<float>* rel = nullptr;
 
         dsp::BandTarget read() const noexcept;
     };

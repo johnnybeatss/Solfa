@@ -21,6 +21,9 @@ per-band Stereo / Left / Right / Mid / Side placement. Full plan: [`docs/roadmap
 a Focus frequency with Key Snap (A = 440 / 432 / 444, key, scale) or Pure, a Literal boost, and
 Resonance: tuned resonators that ring at the Focus and its octaves with your music. Presets show
 up in your DAW's preset list. Details: [`docs/presets.md`](docs/presets.md).
+
+**Phase 6 (dynamic EQ)**: any bell, shelf or tilt band can react to its own frequency region,
+taming it (or lifting it) only when it gets loud, with Threshold, Range, Attack and Release.
 There is no custom UI yet: the plugin shows a plain list of its parameters until Phase 5.
 
 | Format | Platforms | DAWs |

@@ -34,6 +34,11 @@ namespace solfa::dsp
 
     inline constexpr int numPlacements = 5;
 
+    inline bool isGainTypeFor (FilterType t) noexcept
+    {
+        return t == FilterType::bell || t == FilterType::lowShelf || t == FilterType::highShelf || t == FilterType::tilt;
+    }
+
     struct BandTarget
     {
         bool enabled = false;
@@ -43,7 +48,18 @@ namespace solfa::dsp
         double q = 0.707;
         int slopeDbPerOct = 12;
         StereoPlacement placement = StereoPlacement::stereo;
+
+        // Dynamic EQ (bell, shelves, tilt only): as the band's own frequency region rises above
+        // the threshold, the gain moves towards gain + range, reaching it 12 dB above threshold.
+        bool dynamic = false;
+        double dynThresholdDb = -24.0; // RMS level of the sidechain-filtered signal, dBFS
+        double dynRangeDb = -6.0;      // negative: tame when loud; positive: lift when loud
+        double dynAttackMs = 10.0;
+        double dynReleaseMs = 150.0;
     };
+
+    // Detector level above threshold at which a dynamic band reaches its full range.
+    inline constexpr double dynamicKneeSpanDb = 12.0;
 
     // One EQ band: parameter smoothing, coefficient updates and per-channel filter cascades.
     class EqBand
@@ -66,6 +82,9 @@ namespace solfa::dsp
 
         bool isActive() const noexcept { return active; }
 
+        // True if process() must see the audio: the band is filtering, or its detector is listening.
+        bool needsAudio() const noexcept { return active || dynamic; }
+
         // True if this band currently shapes the response (used by auto-gain).
         bool contributesToCurve() const noexcept;
 
@@ -73,11 +92,20 @@ namespace solfa::dsp
         unsigned getVersion() const noexcept { return version; }
 
         const CascadeCoefficients& getCascade() const noexcept { return cascade; }
+
+        // The response without dynamic movement (what auto-gain uses).
+        const CascadeCoefficients& getStaticCascade() const noexcept { return staticCascade; }
+
+        // Current dynamic gain offset in dB (0 when not dynamic).
+        double getDynamicOffsetDb() const noexcept { return dynOffsetDb; }
         StereoPlacement getPlacement() const noexcept { return placement; }
 
     private:
         bool isGainType() const noexcept;
-        void updateCoefficients() noexcept;
+        void updateCoefficients (bool shapeChanged) noexcept;
+        void updateSidechain() noexcept;
+        double detectorPower (double* const* ch, int numChannels, int i) noexcept;
+        double levelToOffsetDb() const noexcept;
         bool filtersSilent() const noexcept;
         void resetFilters() noexcept;
         double runChain (int channel, double x) noexcept;
@@ -97,10 +125,21 @@ namespace solfa::dsp
         // Crossfade used only when switching filters that have no gain to ramp (cuts, notch, band-pass).
         juce::SmoothedValue<double> mixIn { 0.0 };
 
-        CascadeCoefficients cascade;
+        CascadeCoefficients cascade, staticCascade;
         std::array<std::array<Biquad, maxSections>, maxChannels> filters;
         bool coefficientsDirty = true;
         unsigned version = 0;
+        int matchCandidate = 0;
+
+        // Dynamic EQ state
+        bool dynamic = false;
+        double thresholdDb = -24.0, rangeDb = 0.0;
+        double attackMs = -1.0, releaseMs = -1.0;
+        double meanSquare = 0.0;  // short RMS average of the sidechain signal (~2 periods)
+        double rmsCoeff = 0.0;
+        double smoothedOffsetDb = 0.0; // attack/release applied to the gain change, in dB
+        double dynOffsetDb = 0.0; // currently applied
+        std::array<Biquad, maxChannels> sidechain;
     };
 
     // The full EQ: numBands bands in series, processed in double precision.

@@ -62,3 +62,46 @@ TEST_CASE ("EQ processing cost")
         return buffer.getSample (0, 0);
     };
 }
+
+TEST_CASE ("Dynamic EQ processing cost")
+{
+    PluginProcessor plugin;
+    plugin.prepareToPlay (48000.0, 512);
+    for (int b = 0; b < solfa::dsp::numBands; ++b)
+    {
+        auto set = [&] (const char* suffix, float value) {
+            auto* p = plugin.getState().getParameter (solfa::params::bandId (b, suffix));
+            p->setValueNotifyingHost (p->convertTo0to1 (value));
+        };
+        set (solfa::params::on, 1.0f);
+        set (solfa::params::gain, 2.0f);
+        set (solfa::params::dyn, 1.0f);
+        set (solfa::params::thr, -40.0f);
+    }
+
+    juce::AudioBuffer<float> buffer (2, 512);
+    juce::MidiBuffer midi;
+    int n = 0;
+    auto fill = [&] {
+        for (int i = 0; i < 512; ++i, ++n)
+        {
+            // Loud/quiet bursts keep every band's gain moving.
+            const auto env = ((n / 4800) % 2 == 0) ? 0.5f : 0.01f;
+            const auto x = env * std::sin (0.07f * (float) n);
+            buffer.setSample (0, i, x);
+            buffer.setSample (1, i, x);
+        }
+    };
+    for (int k = 0; k < 20; ++k)
+    {
+        fill();
+        plugin.processBlock (buffer, midi);
+    }
+
+    BENCHMARK ("All 24 bands dynamic, stereo, 512 samples")
+    {
+        fill();
+        plugin.processBlock (buffer, midi);
+        return buffer.getSample (0, 0);
+    };
+}

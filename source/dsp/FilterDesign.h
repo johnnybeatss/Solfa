@@ -86,6 +86,12 @@ namespace solfa::dsp
     // Top-level design used by the EQ engine. Safe to call on the audio thread (no allocation).
     BiquadCoefficients design (BandSettings settings, double sampleRate) noexcept;
 
+    // design() = designWithCandidate (s, fs, chooseMatchCandidate (s, fs)). Choosing is the costly
+    // part (it measures two fits), so dynamic bands choose once per shape and reuse the choice
+    // while only their gain moves. -1 means "not a matched design" (bilinear).
+    int chooseMatchCandidate (BandSettings settings, double sampleRate) noexcept;
+    BiquadCoefficients designWithCandidate (BandSettings settings, double sampleRate, int candidate) noexcept;
+
     // A band's filter as a cascade of biquads (first-order sections have b2 = a2 = 0).
     struct CascadeCoefficients
     {

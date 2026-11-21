@@ -96,6 +96,27 @@ namespace solfa::params
             group->addChild (std::make_unique<juce::AudioParameterChoice> (
                 juce::ParameterID { bandId (b, place), 1 }, prefix + "Placement", placeNames, 0));
 
+            group->addChild (std::make_unique<juce::AudioParameterBool> (
+                juce::ParameterID { bandId (b, dyn), 1 }, prefix + "Dynamic", false));
+
+            group->addChild (std::make_unique<juce::AudioParameterFloat> (
+                juce::ParameterID { bandId (b, thr), 1 }, prefix + "Threshold",
+                juce::NormalisableRange<float> (-60.0f, 0.0f, 0.1f), -24.0f,
+                juce::AudioParameterFloatAttributes().withLabel ("dB")));
+
+            group->addChild (std::make_unique<juce::AudioParameterFloat> (
+                juce::ParameterID { bandId (b, range), 1 }, prefix + "Range",
+                juce::NormalisableRange<float> (-18.0f, 18.0f, 0.01f), -6.0f,
+                juce::AudioParameterFloatAttributes().withLabel ("dB")));
+
+            group->addChild (std::make_unique<juce::AudioParameterFloat> (
+                juce::ParameterID { bandId (b, atk), 1 }, prefix + "Attack", logRange (1.0f, 200.0f), 10.0f,
+                juce::AudioParameterFloatAttributes().withLabel ("ms")));
+
+            group->addChild (std::make_unique<juce::AudioParameterFloat> (
+                juce::ParameterID { bandId (b, rel), 1 }, prefix + "Release", logRange (10.0f, 2000.0f), 150.0f,
+                juce::AudioParameterFloatAttributes().withLabel ("ms")));
+
             layout.add (std::move (group));
         }
 
@@ -166,6 +187,11 @@ namespace solfa::params
         const auto slopeIndex = juce::jlimit (0, (int) dsp::slopeOptionsDbPerOct.size() - 1, (int) slope->load());
         t.slopeDbPerOct = dsp::slopeOptionsDbPerOct[(size_t) slopeIndex];
         t.placement = (dsp::StereoPlacement) juce::jlimit (0, dsp::numPlacements - 1, (int) place->load());
+        t.dynamic = dyn->load() >= 0.5f;
+        t.dynThresholdDb = thr->load();
+        t.dynRangeDb = range->load();
+        t.dynAttackMs = atk->load();
+        t.dynReleaseMs = rel->load();
         return t;
     }
 
@@ -200,6 +226,11 @@ namespace solfa::params
             h.q = get (bandId (b, q));
             h.slope = get (bandId (b, slope));
             h.place = get (bandId (b, place));
+            h.dyn = get (bandId (b, dyn));
+            h.thr = get (bandId (b, thr));
+            h.range = get (bandId (b, range));
+            h.atk = get (bandId (b, atk));
+            h.rel = get (bandId (b, rel));
         }
     }
 }

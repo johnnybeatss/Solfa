@@ -74,32 +74,23 @@ namespace solfa::dsp
             return worst;
         }
 
-        BiquadCoefficients designBestMatched (const BandSettings& s, double sampleRate) noexcept
+        // The extra matching frequency for each candidate: the band frequency, or fs/4.
+        double candidateOmega (int candidate, const BandSettings& s, double sampleRate) noexcept
         {
-            const auto analog = makeAnalogPrototype (s);
-            const auto w0 = twoPi * s.frequencyHz / sampleRate;
-            const std::array<double, 2> candidates { w0, 0.5 * pi };
+            return candidate == 0 ? twoPi * s.frequencyHz / sampleRate : 0.5 * pi;
+        }
 
-            BiquadCoefficients best;
-            double bestError = 1.0e300;
-            bool found = false;
+        bool usesMatchedDesign (FilterType t) noexcept
+        {
+            return t != FilterType::lowCut && t != FilterType::notch;
+        }
 
-            for (auto wm : candidates)
-            {
-                BiquadCoefficients c;
-                if (! designMatched (analog, sampleRate, wm, c))
-                    continue;
-
-                const auto err = fitError (c, s, sampleRate);
-                if (err < bestError)
-                {
-                    best = c;
-                    bestError = err;
-                    found = true;
-                }
-            }
-
-            return found ? best : designBilinear (s, sampleRate);
+        // Cuts are designed as the inverse of the matching boost: return that boost.
+        BandSettings boostFor (BandSettings s) noexcept
+        {
+            if (isGainType (s.type))
+                s.gainDb = std::abs (s.gainDb);
+            return s;
         }
     }
 
@@ -289,7 +280,35 @@ namespace solfa::dsp
         return isFinite (out);
     }
 
-    BiquadCoefficients design (BandSettings s, double sampleRate) noexcept
+    int chooseMatchCandidate (BandSettings s, double sampleRate) noexcept
+    {
+        s = sanitise (s, sampleRate);
+        if (! usesMatchedDesign (s.type))
+            return -1;
+
+        auto boost = boostFor (s);
+        if (isGainType (s.type) && boost.gainDb < 1.0e-9)
+            boost.gainDb = 6.0; // flat: pick for a representative boost
+
+        const auto analog = makeAnalogPrototype (boost);
+        int best = -1;
+        double bestError = 1.0e300;
+        for (int candidate = 0; candidate < 2; ++candidate)
+        {
+            BiquadCoefficients c;
+            if (! designMatched (analog, sampleRate, candidateOmega (candidate, boost, sampleRate), c))
+                continue;
+            const auto err = fitError (c, boost, sampleRate);
+            if (err < bestError)
+            {
+                best = candidate;
+                bestError = err;
+            }
+        }
+        return best;
+    }
+
+    BiquadCoefficients designWithCandidate (BandSettings s, double sampleRate, int candidate) noexcept
     {
         s = sanitise (s, sampleRate);
 
@@ -298,17 +317,20 @@ namespace solfa::dsp
 
         // Low-cut: bilinear measured more accurate where low-cuts are used. Notch: bilinear keeps
         // the zero exactly on the unit circle, so the notch is truly deep at its frequency.
-        if (s.type == FilterType::lowCut || s.type == FilterType::notch)
+        if (! usesMatchedDesign (s.type) || candidate < 0)
             return designBilinear (s, sampleRate);
 
-        if (isGainType (s.type) && s.gainDb < 0.0)
-        {
-            auto boost = s;
-            boost.gainDb = -s.gainDb;
-            return invert (designBestMatched (boost, sampleRate));
-        }
+        const auto boost = boostFor (s);
+        BiquadCoefficients c;
+        if (! designMatched (makeAnalogPrototype (boost), sampleRate, candidateOmega (candidate, boost, sampleRate), c))
+            return designBilinear (s, sampleRate);
 
-        return designBestMatched (s, sampleRate);
+        return isGainType (s.type) && s.gainDb < 0.0 ? invert (c) : c;
+    }
+
+    BiquadCoefficients design (BandSettings s, double sampleRate) noexcept
+    {
+        return designWithCandidate (s, sampleRate, chooseMatchCandidate (s, sampleRate));
     }
 
     double butterworthSectionQ (int order, int k) noexcept
