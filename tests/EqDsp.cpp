@@ -246,6 +246,11 @@ TEST_CASE ("Switching a band off returns to bit-exact transparency", "[engine][n
         REQUIRE (juce::exactlyEqual (buffer.getSample (0, i), input.getSample (0, i)));
 }
 
+// MSVC 14.52 crashes with "fatal error C1001: Internal compiler error" when optimising this test
+// (seen on the windows-latest CI image). Optimisation is irrelevant for a test, so turn it off here.
+#if defined(_MSC_VER) && ! defined(__clang__)
+    #pragma optimize ("", off)
+#endif
 TEST_CASE ("Fast automation does not click", "[engine][automation]")
 {
     // A 1 kHz sine through a +12 dB bell whose frequency jumps between 300 Hz and 3 kHz every
@@ -293,6 +298,10 @@ TEST_CASE ("Fast automation does not click", "[engine][automation]")
     INFO ("max second difference " << maxSecondDiff << ", smooth-signal limit " << smoothLimit);
     CHECK (maxSecondDiff < 2.0 * smoothLimit);
 }
+
+#if defined(_MSC_VER) && ! defined(__clang__)
+    #pragma optimize ("", on)
+#endif
 
 TEST_CASE ("Gains within 0.001 dB of zero count as exactly zero", "[engine][null]")
 {
