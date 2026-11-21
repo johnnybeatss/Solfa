@@ -1,39 +1,24 @@
 #include "PluginProcessor.h"
-#include "PluginEditor.h"
 
 namespace
 {
-    constexpr double gainSmoothingSeconds = 0.03; // 30 ms: inside the 20-50 ms range from the research
+    constexpr double gainSmoothingSeconds = 0.03; // within the 20-50 ms range from the research
 }
 
 PluginProcessor::PluginProcessor()
     : AudioProcessor (BusesProperties()
                           .withInput ("Input", juce::AudioChannelSet::stereo(), true)
                           .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
-      state (*this, nullptr, "SolfaState", createParameterLayout())
+      state (*this, nullptr, "SolfaState", solfa::params::createLayout()),
+      handles (state)
 {
-    outputGainDb = state.getRawParameterValue (solfa::ids::outputGain);
-    jassert (outputGainDb != nullptr);
 }
 
-juce::AudioProcessorValueTreeState::ParameterLayout PluginProcessor::createParameterLayout()
+void PluginProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    juce::AudioProcessorValueTreeState::ParameterLayout layout;
-
-    layout.add (std::make_unique<juce::AudioParameterFloat> (
-        juce::ParameterID { solfa::ids::outputGain, 1 },
-        "Output",
-        juce::NormalisableRange<float> (-24.0f, 24.0f, 0.01f),
-        0.0f,
-        juce::AudioParameterFloatAttributes().withLabel ("dB")));
-
-    return layout;
-}
-
-void PluginProcessor::prepareToPlay (double sampleRate, int)
-{
+    engine.prepare (sampleRate, samplesPerBlock, getTotalNumOutputChannels());
     outputGain.reset (sampleRate, gainSmoothingSeconds);
-    outputGain.setCurrentAndTargetValue (juce::Decibels::decibelsToGain (outputGainDb->load()));
+    outputGain.setCurrentAndTargetValue (juce::Decibels::decibelsToGain (handles.outputGain->load()));
 }
 
 void PluginProcessor::releaseResources() {}
@@ -55,16 +40,19 @@ void PluginProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Midi
     for (auto ch = getTotalNumInputChannels(); ch < getTotalNumOutputChannels(); ++ch)
         buffer.clear (ch, 0, buffer.getNumSamples());
 
-    outputGain.setTargetValue (juce::Decibels::decibelsToGain (outputGainDb->load()));
+    for (int b = 0; b < solfa::dsp::numBands; ++b)
+        engine.setBand (b, handles.bands[(size_t) b].read());
+    engine.setAmount (handles.amount->load() / 100.0);
+    engine.process (buffer);
 
-    // Fast path: exactly unity and not ramping -> leave the audio bit-for-bit untouched.
+    outputGain.setTargetValue (juce::Decibels::decibelsToGain (handles.outputGain->load()));
+
+    // Unity and not ramping: leave the audio untouched (keeps the flat setting bit-exact).
     if (! outputGain.isSmoothing() && juce::exactlyEqual (outputGain.getTargetValue(), 1.0f))
         return;
 
     const auto numChannels = getTotalNumInputChannels();
-    const auto numSamples = buffer.getNumSamples();
-
-    for (int i = 0; i < numSamples; ++i)
+    for (int i = 0; i < buffer.getNumSamples(); ++i)
     {
         const auto g = outputGain.getNextValue();
         for (int ch = 0; ch < numChannels; ++ch)
@@ -74,7 +62,9 @@ void PluginProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Midi
 
 juce::AudioProcessorEditor* PluginProcessor::createEditor()
 {
-    return new PluginEditor (*this);
+    // Temporary until the real UI (Phase 5): JUCE's generic editor lists every parameter,
+    // which is enough for listening tests in a DAW.
+    return new juce::GenericAudioProcessorEditor (*this);
 }
 
 void PluginProcessor::getStateInformation (juce::MemoryBlock& destData)

@@ -1,20 +1,15 @@
 #pragma once
 
-#include <juce_audio_processors/juce_audio_processors.h>
+#include "Parameters.h"
+#include "dsp/EqEngine.h"
 
-namespace solfa::ids
-{
-    // Parameter IDs are saved in DAW sessions: never rename one after release.
-    inline constexpr auto outputGain = "outputGain";
-}
+#include <juce_audio_processors/juce_audio_processors.h>
 
 class PluginProcessor : public juce::AudioProcessor
 {
 public:
     PluginProcessor();
     ~PluginProcessor() override = default;
-
-    static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
@@ -41,10 +36,12 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     juce::AudioProcessorValueTreeState& getState() noexcept { return state; }
+    const solfa::dsp::EqEngine& getEngine() const noexcept { return engine; }
 
 private:
     juce::AudioProcessorValueTreeState state;
-    std::atomic<float>* outputGainDb = nullptr; // read lock-free on the audio thread
+    solfa::params::Handles handles;
+    solfa::dsp::EqEngine engine;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Multiplicative> outputGain { 1.0f };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginProcessor)

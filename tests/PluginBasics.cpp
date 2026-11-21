@@ -20,7 +20,7 @@ namespace
 
     void setOutputGainDb (PluginProcessor& plugin, float db)
     {
-        auto* param = plugin.getState().getParameter (solfa::ids::outputGain);
+        auto* param = plugin.getState().getParameter (solfa::params::outputGain);
         REQUIRE (param != nullptr);
         param->setValueNotifyingHost (param->convertTo0to1 (db));
     }
@@ -109,7 +109,7 @@ TEST_CASE ("State round-trips through save and load", "[state]")
     PluginProcessor restored;
     restored.setStateInformation (blob.getData(), (int) blob.getSize());
 
-    const auto* value = restored.getState().getRawParameterValue (solfa::ids::outputGain);
+    const auto* value = restored.getState().getRawParameterValue (solfa::params::outputGain);
     REQUIRE (value != nullptr);
     CHECK (value->load() == Catch::Approx (-7.5f).margin (0.01f));
 }

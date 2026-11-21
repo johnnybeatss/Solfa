@@ -62,7 +62,10 @@ juce_add_plugin("${PROJECT_NAME}"
     AAX_CATEGORY AAX_ePlugInCategory_EQ
 
     # Copies plugins into the user's plug-in folders after building (handy on your Mac)
-    COPY_PLUGIN_AFTER_BUILD TRUE)
+    COPY_PLUGIN_AFTER_BUILD TRUE
+    # Pro Tools' AAX folder (/Library/Application Support/Avid/...) needs admin rights, so keep
+    # AAX builds in the build tree; copy them manually once Avid signing is set up.
+    AAX_COPY_DIR "${CMAKE_BINARY_DIR}/AAX-not-installed")
 
 clap_juce_extensions_plugin(TARGET "${PROJECT_NAME}"
     CLAP_ID "${BUNDLE_ID}"
