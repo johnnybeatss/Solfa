@@ -267,3 +267,31 @@ TEST_CASE ("Init returns to a bit-transparent state", "[presets][null]")
     for (int i = 0; i < 512; ++i)
         REQUIRE (juce::exactlyEqual (buffer.getSample (0, i), input.getSample (0, i)));
 }
+
+TEST_CASE ("User presets save and load the full state", "[presets]")
+{
+    const auto file = juce::File::createTempFile (presets::userPresetExtension);
+    PluginProcessor a;
+    setParam (a, params::bandId (7, params::on), 1.0f);
+    setParam (a, params::bandId (7, params::gain), -4.5f);
+    setParam (a, params::focus, 852.0f);
+    setParam (a, params::phaseMode, 1.0f);
+    auto xml = a.saveStateXml();
+    REQUIRE (xml != nullptr);
+    REQUIRE (presets::writeUserPreset (file, *xml));
+
+    PluginProcessor b;
+    auto loaded = presets::readUserPreset (file.withFileExtension (presets::userPresetExtension));
+    REQUIRE (loaded != nullptr);
+    REQUIRE (b.loadStateXml (*loaded));
+    CHECK (getParam (b, params::bandId (7, params::on)) > 0.5f);
+    CHECK (getParam (b, params::bandId (7, params::gain)) == Catch::Approx (-4.5f).margin (0.01f));
+    CHECK (getParam (b, params::focus) == Catch::Approx (852.0f).margin (0.5f));
+    CHECK (getParam (b, params::phaseMode) == Catch::Approx (1.0f));
+
+    // Something that isn't a Solfa state is rejected.
+    juce::XmlElement other ("NotSolfa");
+    CHECK_FALSE (b.loadStateXml (other));
+    file.withFileExtension (presets::userPresetExtension).deleteFile();
+    file.deleteFile();
+}

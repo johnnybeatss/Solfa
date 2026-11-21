@@ -32,4 +32,11 @@ namespace solfa::presets
 
     // Sets every affected parameter; call on the message thread.
     void apply (const Preset& preset, juce::AudioProcessorValueTreeState& state);
+
+    // User presets: XML files (*.solfapreset) in Documents/Solfa/Presets.
+    inline constexpr auto userPresetExtension = ".solfapreset";
+    juce::File userPresetFolder();
+    juce::Array<juce::File> userPresetFiles();
+    bool writeUserPreset (const juce::File& file, const juce::XmlElement& state);
+    std::unique_ptr<juce::XmlElement> readUserPreset (const juce::File& file);
 }

@@ -8,22 +8,13 @@ PluginEditor::PluginEditor (PluginProcessor& p)
 {
     setLookAndFeel (&lookAndFeel);
 
-    for (const auto& preset : presets::factory())
-        presetBox.addItem (preset.name, presetBox.getNumItems() + 1);
-    presetBox.onChange = [this] {
-        const auto index = presetBox.getSelectedItemIndex();
-        if (index >= 0 && index != solfaProcessor.getCurrentProgram())
-            solfaProcessor.setCurrentProgram (index);
-    };
+    rebuildPresetBox();
+    presetBox.onChange = [this] { presetChosen (presetBox.getSelectedId()); };
     prevPreset.onClick = [this] {
         const auto n = solfaProcessor.getNumPrograms();
-        solfaProcessor.setCurrentProgram ((solfaProcessor.getCurrentProgram() + n - 1) % n);
-        refreshPresetBox();
+        presetChosen ((solfaProcessor.getCurrentProgram() + n - 1) % n + 1);
     };
-    nextPreset.onClick = [this] {
-        solfaProcessor.setCurrentProgram ((solfaProcessor.getCurrentProgram() + 1) % solfaProcessor.getNumPrograms());
-        refreshPresetBox();
-    };
+    nextPreset.onClick = [this] { presetChosen ((solfaProcessor.getCurrentProgram() + 1) % solfaProcessor.getNumPrograms() + 1); };
     refreshPresetBox();
 
     phaseBox.addItemList ({ "Zero Latency", "Linear Phase", "Linear Phase HD" }, 1);
@@ -66,9 +57,79 @@ PluginEditor::~PluginEditor()
     setLookAndFeel (nullptr);
 }
 
+void PluginEditor::rebuildPresetBox()
+{
+    presetBox.clear (juce::dontSendNotification);
+    presetBox.addSectionHeading ("Factory");
+    const auto& factory = presets::factory();
+    for (int i = 0; i < (int) factory.size(); ++i)
+        presetBox.addItem (factory[(size_t) i].name, factoryIdBase + i);
+
+    userPresets = presets::userPresetFiles();
+    if (! userPresets.isEmpty())
+    {
+        presetBox.addSectionHeading ("My presets");
+        for (int i = 0; i < userPresets.size(); ++i)
+            presetBox.addItem (userPresets[i].getFileNameWithoutExtension(), userIdBase + i);
+    }
+    presetBox.addSeparator();
+    presetBox.addItem ("Save preset...", saveId);
+    presetBox.addItem ("Show presets folder", showFolderId);
+    presetBox.setSelectedId (shownPresetId, juce::dontSendNotification);
+}
+
+void PluginEditor::presetChosen (int id)
+{
+    if (id >= factoryIdBase && id < userIdBase)
+    {
+        solfaProcessor.setCurrentProgram (id - factoryIdBase);
+        lastHostProgram = solfaProcessor.getCurrentProgram();
+        shownPresetId = id;
+    }
+    else if (id >= userIdBase && id < saveId && userPresets[id - userIdBase].existsAsFile())
+    {
+        if (auto xml = presets::readUserPreset (userPresets[id - userIdBase]); xml != nullptr && solfaProcessor.loadStateXml (*xml))
+            shownPresetId = id;
+    }
+    else if (id == saveId)
+    {
+        presets::userPresetFolder().createDirectory();
+        saveChooser = std::make_unique<juce::FileChooser> ("Save Solfa preset",
+            presets::userPresetFolder().getChildFile ("My preset").withFileExtension (presets::userPresetExtension),
+            juce::String ("*") + presets::userPresetExtension);
+        juce::Component::SafePointer<PluginEditor> safe (this);
+        saveChooser->launchAsync (juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::warnAboutOverwriting,
+            [safe] (const juce::FileChooser& fc) {
+                if (safe == nullptr || fc.getResult() == juce::File())
+                    return;
+                if (auto xml = safe->solfaProcessor.saveStateXml())
+                    presets::writeUserPreset (fc.getResult(), *xml);
+                safe->rebuildPresetBox();
+                const auto saved = fc.getResult().withFileExtension (presets::userPresetExtension);
+                for (int i = 0; i < safe->userPresets.size(); ++i)
+                    if (safe->userPresets[i] == saved)
+                        safe->shownPresetId = userIdBase + i;
+                safe->presetBox.setSelectedId (safe->shownPresetId, juce::dontSendNotification);
+            });
+    }
+    else if (id == showFolderId)
+    {
+        presets::userPresetFolder().createDirectory();
+        presets::userPresetFolder().revealToUser();
+    }
+    presetBox.setSelectedId (shownPresetId, juce::dontSendNotification);
+}
+
 void PluginEditor::refreshPresetBox()
 {
-    presetBox.setSelectedItemIndex (solfaProcessor.getCurrentProgram(), juce::dontSendNotification);
+    // Follow preset changes made by the host (its own preset/program menu).
+    if (solfaProcessor.getCurrentProgram() != lastHostProgram)
+    {
+        lastHostProgram = solfaProcessor.getCurrentProgram();
+        shownPresetId = factoryIdBase + lastHostProgram;
+    }
+    if (presetBox.getSelectedId() != shownPresetId)
+        presetBox.setSelectedId (shownPresetId, juce::dontSendNotification);
 }
 
 void PluginEditor::paint (juce::Graphics& g)

@@ -39,6 +39,10 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    // Full plugin state as XML (host sessions and user preset files use the same format).
+    std::unique_ptr<juce::XmlElement> saveStateXml();
+    bool loadStateXml (const juce::XmlElement& xml);
+
     juce::AudioProcessorValueTreeState& getState() noexcept { return state; }
     const solfa::dsp::EqEngine& getEngine() const noexcept { return engine; }
 

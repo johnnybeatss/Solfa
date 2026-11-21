@@ -7,6 +7,8 @@ Guidance for Claude Code when working in this repository.
 Solfa is a JUCE 9 audio plugin (parametric EQ with "spiritual frequency" presets) built from
 the Pamplejuce template. Formats: VST3, AU, AAX, CLAP, Standalone. Owner develops on macOS.
 Not being sold yet: no licensing, signing or store work unless asked.
+Status: 0.9.0 beta, feature-complete per `docs/roadmap.md`; awaiting manual DAW testing
+(`docs/testing-checklist.md`).
 
 The design rationale and evidence are in `docs/research/`. Read the report before changing
 DSP behaviour or presets.

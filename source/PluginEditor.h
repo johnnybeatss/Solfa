@@ -17,9 +17,17 @@ public:
 
     solfa::ui::EqDisplay& getDisplay() noexcept { return display; }
     solfa::ui::MatchPanel& getMatchPanel() noexcept { return matchPanel; }
+    juce::ComboBox& getPresetBox() noexcept { return presetBox; }
 
 private:
     void refreshPresetBox();
+    void rebuildPresetBox();
+    void presetChosen (int itemId);
+
+    static constexpr int factoryIdBase = 1, userIdBase = 1000, saveId = 9000, showFolderId = 9001;
+    juce::Array<juce::File> userPresets;
+    int shownPresetId = factoryIdBase, lastHostProgram = -1;
+    std::unique_ptr<juce::FileChooser> saveChooser;
     void timerCallback() override { refreshPresetBox(); }
 
     PluginProcessor& solfaProcessor;

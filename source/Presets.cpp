@@ -99,4 +99,29 @@ namespace solfa::presets
         if (preset.referenceIndex >= 0)
             set (state, params::tuneRef, (float) preset.referenceIndex);
     }
+
+    juce::File userPresetFolder()
+    {
+        return juce::File::getSpecialLocation (juce::File::userDocumentsDirectory).getChildFile ("Solfa").getChildFile ("Presets");
+    }
+
+    juce::Array<juce::File> userPresetFiles()
+    {
+        auto files = userPresetFolder().findChildFiles (juce::File::findFiles, false, juce::String ("*") + userPresetExtension);
+        files.sort();
+        return files;
+    }
+
+    bool writeUserPreset (const juce::File& file, const juce::XmlElement& state)
+    {
+        auto target = file.withFileExtension (userPresetExtension);
+        if (! target.getParentDirectory().createDirectory())
+            return false;
+        return state.writeTo (target);
+    }
+
+    std::unique_ptr<juce::XmlElement> readUserPreset (const juce::File& file)
+    {
+        return juce::XmlDocument::parse (file);
+    }
 }

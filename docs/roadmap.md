@@ -11,7 +11,7 @@
 | 7 | Interface: draggable curve, analyser, Spectrum Grab, solfeggio markers, "About the science" | Done |
 | 8 | Linear-phase mode | Done |
 | 9 | EQ Match (copy a reference track's tonal balance) | Done |
-| 10 | DAW testing and beta | Next |
+| 10 | Beta: user presets, docs, test checklist (manual DAW testing by the owner) | Done; DAW testing in progress |
 
 ## Resonance (Phase 5)
 

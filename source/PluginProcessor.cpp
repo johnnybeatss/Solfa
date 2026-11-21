@@ -262,18 +262,28 @@ juce::AudioProcessorEditor* PluginProcessor::createEditor()
 
 void PluginProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    if (auto xml = state.copyState().createXml())
+    if (auto xml = saveStateXml())
         copyXmlToBinary (*xml, destData);
 }
 
 void PluginProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     if (auto xml = getXmlFromBinary (data, sizeInBytes))
-    {
-        if (! xml->hasTagName (state.state.getType()))
-            return;
+        loadStateXml (*xml);
+}
 
-        state.replaceState (juce::ValueTree::fromXml (*xml));
+std::unique_ptr<juce::XmlElement> PluginProcessor::saveStateXml()
+{
+    return state.copyState().createXml();
+}
+
+bool PluginProcessor::loadStateXml (const juce::XmlElement& xml)
+{
+    {
+        if (! xml.hasTagName (state.state.getType()))
+            return false;
+
+        state.replaceState (juce::ValueTree::fromXml (xml));
 
         // APVTS skips a parameter whose value already "means" the restored value. A host can leave
         // a bool at, say, 0.43 (= off); restoring "off" would then leave the raw 0.43 in place.
@@ -287,6 +297,9 @@ void PluginProcessor::setStateInformation (const void* data, int sizeInBytes)
                         ranged->setValueNotifyingHost (target);
                 }
     }
+    engine.requestSnap(); // a loaded state jumps, it doesn't sweep
+    snapOutputGain.store (true);
+    return true;
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
