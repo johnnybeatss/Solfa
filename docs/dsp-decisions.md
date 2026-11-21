@@ -70,9 +70,9 @@ Auto Gain on:
 
 | Curve | Compensation | Residual loudness change |
 |---|---|---|
-| High shelf +6 dB @ 3 kHz | -1.36 dB | +0.07 dB |
+| High shelf +6 dB @ 3 kHz | -3.74 dB | +0.15 dB |
 | Low shelf +6 dB @ 150 Hz | -0.96 dB | -0.03 dB |
-| Bell -8 dB @ 1 kHz, Q 0.7 | +3.74 dB | +0.15 dB |
+| Bell -8 dB @ 1 kHz, Q 0.7 | +1.36 dB | +0.07 dB |
 | Tilt +4 dB @ 1 kHz | -0.97 dB | +0.07 dB |
 
 Real music is not pink noise, so expect larger residuals on very bass- or treble-heavy material;
