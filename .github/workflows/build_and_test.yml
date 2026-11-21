@@ -1,0 +1,140 @@
+name: Build and test
+
+# Builds every plugin format on macOS, Windows and Linux, runs the unit tests,
+# and validates the plugins (pluginval + Apple's auval). Builds are UNSIGNED:
+# code signing / notarisation is deferred until Solfa is shared with others.
+#
+# Cost note for private repos: macOS runners consume CI minutes at 10x and
+# Windows at 2x. Comment out matrix entries you don't need during development.
+
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUILD_TYPE: Release
+  BUILD_DIR: Builds
+  DISPLAY: :0 # Linux pluginval needs a (virtual) display
+  HOMEBREW_NO_INSTALL_CLEANUP: 1
+  SCCACHE_GHA_ENABLED: true
+  SCCACHE_CACHE_MULTIARCH: 1
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build_and_test:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS
+            os: macos-14
+            pluginval-binary: pluginval.app/Contents/MacOS/pluginval
+            extra-flags: -G Ninja -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+          - name: Windows
+            os: windows-latest
+            pluginval-binary: ./pluginval.exe
+            extra-flags: -G Ninja -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl
+          - name: Linux
+            os: ubuntu-22.04
+            pluginval-binary: ./pluginval
+            extra-flags: -G Ninja -DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld -DCMAKE_MODULE_LINKER_FLAGS=-fuse-ld=lld
+
+    steps:
+      - uses: ilammy/msvc-dev-cmd@v1 # MSVC toolchain (Windows only; no-op elsewhere)
+
+      - name: Set up Clang
+        if: runner.os == 'Linux'
+        uses: egor-tensin/setup-clang@v2
+
+      - name: Install Linux deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libx11-dev libxi-dev libxinerama-dev libxext-dev \
+            libxrandr-dev libxcursor-dev libxcomposite-dev libxrender-dev libfreetype-dev \
+            libfontconfig1-dev libglu1-mesa-dev mesa-common-dev xvfb ninja-build
+          sudo /usr/bin/Xvfb $DISPLAY &
+
+      - name: Install Ninja (Windows)
+        if: runner.os == 'Windows'
+        run: choco install ninja
+
+      - name: Install Ninja (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja
+
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Cache the build
+        uses: mozilla-actions/sccache-action@v0.0.11
+
+      - name: Configure
+        run: cmake -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache ${{ matrix.extra-flags }} .
+
+      - name: Build
+        run: cmake --build ${{ env.BUILD_DIR }} --config ${{ env.BUILD_TYPE }} --target Solfa_All Solfa_CLAP Tests Benchmarks
+
+      - name: Unit tests
+        working-directory: ${{ env.BUILD_DIR }}
+        run: ctest --verbose --output-on-failure
+
+      - name: Read config exported by CMake
+        run: cat .env >> $GITHUB_ENV # cmake/GitHubENV.cmake writes .env to the repo root on CI
+
+      - name: Set artefact paths
+        run: |
+          ARTIFACTS_PATH=${{ env.BUILD_DIR }}/${{ env.PROJECT_NAME }}_artefacts/${{ env.BUILD_TYPE }}
+          echo "ARTIFACTS_PATH=$ARTIFACTS_PATH" >> $GITHUB_ENV
+          echo "VST3_PATH=$ARTIFACTS_PATH/VST3/${{ env.PRODUCT_NAME }}.vst3" >> $GITHUB_ENV
+          echo "ARTIFACT_NAME=${{ env.PRODUCT_NAME }}-${{ env.VERSION }}-${{ runner.os }}-unsigned" >> $GITHUB_ENV
+
+      - name: pluginval (VST3, strictness 10)
+        run: |
+          curl -LO "https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_${{ runner.os }}.zip"
+          7z x pluginval_${{ runner.os }}.zip
+          ${{ matrix.pluginval-binary }} --strictness-level 10 --verbose --validate "${{ env.VST3_PATH }}"
+
+      - name: auval (AU, both architectures)
+        if: runner.os == 'macOS'
+        run: |
+          # COPY_PLUGIN_AFTER_BUILD installed the AU into ~/Library/Audio/Plug-Ins/Components.
+          # Restart the AU registrar so it notices the new component.
+          killall -9 AudioComponentRegistrar 2>/dev/null || true
+          auval -a | grep -i solfa || true
+          auval -v aufx Sfeq Slfa
+          if arch -x86_64 /usr/bin/true 2>/dev/null; then
+            arch -x86_64 auval -v aufx Sfeq Slfa
+          else
+            echo "Rosetta not available on this runner: skipped x86_64 auval"
+          fi
+
+      - name: Zip plugins
+        run: |
+          cd "${{ env.ARTIFACTS_PATH }}"
+          rm -f lib*_SharedCode.a
+          if [ "${{ runner.os }}" = "macOS" ]; then
+            # ditto keeps bundle symlinks and executable bits, which plain zip/upload would lose
+            ditto -c -k --sequesterRsrc . "$GITHUB_WORKSPACE/${{ env.ARTIFACT_NAME }}.zip"
+          else
+            7z a -tzip "$GITHUB_WORKSPACE/${{ env.ARTIFACT_NAME }}.zip" .
+          fi
+
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.ARTIFACT_NAME }}.zip
