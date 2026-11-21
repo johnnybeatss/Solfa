@@ -86,3 +86,22 @@ signal was +2.95 dB louder and Compare played the dry signal at +2.98 dB.
 
 The K-weighting filters use libebur128's parameterisation, which reproduces the 48 kHz
 coefficients published in BS.1770 to about 1e-15 and works at any sample rate.
+
+## Bands & shapes (Phase 4)
+
+- **24 bands**, all in series, each skipped entirely while inactive. All 24 active cost about
+  79 µs per 512-sample stereo block at 48 kHz (about 0.7% of the real-time budget).
+- **Cut slopes 6-96 dB/oct** are Butterworth cascades: order n = slope / 6, one first-order
+  section for odd n plus n/2 biquads with the textbook Butterworth Qs. The band's Q scales the
+  sharpest section, so Q 0.707 is a plain Butterworth and higher Q adds a corner resonance.
+  High-cut sections are analog-matched (first-order: exact pole, magnitude fitted at DC and
+  Nyquist); low-cut sections are bilinear, as before. Measured against the ideal analog
+  Butterworth at 48/96 kHz: within 0.5 dB wherever the filter passes sound, within 1.5 dB in
+  the stop band down to -60 dB.
+- **Notch** uses the bilinear design so its zero sits exactly on the unit circle (measured
+  deeper than -60 dB at the centre). **Band-pass** is analog-matched with a 0 dB peak.
+- **Stereo placement** per band: Stereo, Left, Right, Mid or Side. Mid/Side bands convert to
+  M = (L+R)/2, S = (L-R)/2, filter one part and convert back; tests confirm a Left band leaves
+  the right channel bit-for-bit untouched, a Mid band ignores pure side content and a Side band
+  ignores mono content. Auto Gain counts one-channel and Mid/Side bands as affecting half the
+  signal power (an approximation).

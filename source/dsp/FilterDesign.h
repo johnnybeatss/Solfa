@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+
 // Coefficient design for Solfa's EQ bands.
 //
 // Policy (measured in docs/research/notes/eq_dsp_best_practices.md and the Phase 2 prototype):
@@ -21,11 +23,19 @@ namespace solfa::dsp
         lowShelf,
         highShelf,
         lowCut,  // 12 dB/oct high-pass
-        highCut, // 12 dB/oct low-pass
-        tilt     // -g/2 below the pivot, +g/2 above
+        highCut, // low-pass, 6-96 dB/oct
+        tilt,    // -g/2 below the pivot, +g/2 above
+        notch,
+        bandPass // 0 dB peak at the centre frequency
+        // Append new types at the end: the index is stored in DAW sessions.
     };
 
-    inline constexpr int numFilterTypes = 6;
+    inline constexpr int numFilterTypes = 8;
+
+    // Cut filters can be steeper than one biquad: Butterworth cascades up to 96 dB/oct.
+    inline constexpr int maxSections = 8;
+    inline constexpr std::array<int, 8> slopeOptionsDbPerOct { 6, 12, 18, 24, 36, 48, 72, 96 };
+    inline constexpr int defaultSlopeIndex = 1; // 12 dB/oct
 
     // Normalised digital biquad: H(z) = (b0 + b1 z^-1 + b2 z^-2) / (1 + a1 z^-1 + a2 z^-2)
     struct BiquadCoefficients
@@ -75,6 +85,23 @@ namespace solfa::dsp
 
     // Top-level design used by the EQ engine. Safe to call on the audio thread (no allocation).
     BiquadCoefficients design (BandSettings settings, double sampleRate) noexcept;
+
+    // A band's filter as a cascade of biquads (first-order sections have b2 = a2 = 0).
+    struct CascadeCoefficients
+    {
+        std::array<BiquadCoefficients, maxSections> sections {};
+        int numSections = 1;
+
+        bool isIdentity() const noexcept { return numSections == 1 && sections[0].isIdentity(); }
+    };
+
+    // Full design for a band. slopeDbPerOct applies to low/high cut only (6..96, multiple of 6).
+    CascadeCoefficients designCascade (BandSettings settings, int slopeDbPerOct, double sampleRate) noexcept;
+
+    double cascadePowerGain (const CascadeCoefficients& c, double frequencyHz, double sampleRate) noexcept;
+
+    // Q of each Butterworth biquad section for a filter of the given order (highest Q last).
+    double butterworthSectionQ (int order, int sectionIndex) noexcept;
 
     // Power gain |H|^2 of a digital biquad at frequencyHz.
     double powerGain (const BiquadCoefficients& c, double frequencyHz, double sampleRate) noexcept;

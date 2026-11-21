@@ -45,5 +45,7 @@ pluginval (must pass at strictness 10):
   picks Literal mode.
 - Tests must cover: bit-exact null at flat settings, response accuracy at 44.1-192 kHz, the
   "+g then -g" identity, clicks under fast automation, state save/restore.
+- Pro-Q-style *capabilities* are welcome, but never copy FabFilter's name, look, layout or
+  artwork (see `docs/roadmap.md`).
 - **No health claims** in UI text, preset names, docs or comments (no "heals", "reduces
   anxiety", "improves sleep", "repairs DNA", "brainwave"). Describe sound character only.

@@ -8,7 +8,7 @@
 
 namespace solfa::dsp
 {
-    inline constexpr int numBands = 8;
+    inline constexpr int numBands = 24;
     inline constexpr int maxChannels = 2;
 
     // Gains closer to 0 dB than this are treated as exactly 0 dB. Parameter snapping can turn a
@@ -21,6 +21,18 @@ namespace solfa::dsp
         return std::abs (gainDb) < unityToleranceDb ? 0.0 : gainDb;
     }
 
+    // Which part of a stereo signal a band processes. Append only: stored in DAW sessions.
+    enum class StereoPlacement
+    {
+        stereo = 0,
+        left,
+        right,
+        mid,
+        side
+    };
+
+    inline constexpr int numPlacements = 5;
+
     struct BandTarget
     {
         bool enabled = false;
@@ -28,9 +40,11 @@ namespace solfa::dsp
         double frequencyHz = 1000.0;
         double gainDb = 0.0;
         double q = 0.707;
+        int slopeDbPerOct = 12;
+        StereoPlacement placement = StereoPlacement::stereo;
     };
 
-    // One EQ band: parameter smoothing, coefficient updates and per-channel filters.
+    // One EQ band: parameter smoothing, coefficient updates and per-channel filter cascades.
     class EqBand
     {
     public:
@@ -53,15 +67,22 @@ namespace solfa::dsp
 
         // Increments whenever the coefficients change.
         unsigned getVersion() const noexcept { return version; }
-        const BiquadCoefficients& getCoefficients() const noexcept { return filters[0].getCoefficients(); }
+
+        const CascadeCoefficients& getCascade() const noexcept { return cascade; }
+        StereoPlacement getPlacement() const noexcept { return placement; }
 
     private:
         bool isGainType() const noexcept;
         void updateCoefficients() noexcept;
         void snapToTarget() noexcept;
+        bool filtersSilent() const noexcept;
+        void resetFilters() noexcept;
+        double runChain (int channel, double x) noexcept;
 
         double sampleRate = 48000.0;
         FilterType type = FilterType::bell;
+        int slopeDbPerOct = 12;
+        StereoPlacement placement = StereoPlacement::stereo;
         bool enabled = false;
         bool active = false;
         bool firstTarget = true;
@@ -70,10 +91,11 @@ namespace solfa::dsp
         juce::SmoothedValue<double> log2Freq { std::log2 (1000.0) };
         juce::SmoothedValue<double> gainDb { 0.0 };
         juce::SmoothedValue<double> log2Q { std::log2 (0.707) };
-        // Crossfade used only when enabling/disabling cut filters (which have no gain to ramp).
-        juce::SmoothedValue<double> cutMix { 0.0 };
+        // Crossfade used only when switching filters that have no gain to ramp (cuts, notch, band-pass).
+        juce::SmoothedValue<double> mixIn { 0.0 };
 
-        std::array<Biquad, maxChannels> filters;
+        CascadeCoefficients cascade;
+        std::array<std::array<Biquad, maxSections>, maxChannels> filters;
         bool coefficientsDirty = true;
         unsigned version = 0;
     };
@@ -98,7 +120,8 @@ namespace solfa::dsp
 
         const EqBand& getBand (int index) const noexcept { return bands[(size_t) index]; }
 
-        // Power gain |H(f)|^2 of the whole curve (bands that currently contribute).
+        // Approximate power gain |H(f)|^2 of the whole curve, for auto-gain. Bands on one
+        // channel or on Mid/Side count as affecting half the signal power.
         double curvePowerAt (double frequencyHz) const noexcept;
 
         // Changes whenever any band's coefficients change.

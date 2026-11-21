@@ -8,11 +8,14 @@ what the evidence does and doesn't support, is in [`docs/research/`](docs/resear
 
 ## Status
 
-**Phase 2 (EQ engine)**: 8 bands (bell, low/high shelf, low/high cut, tilt), an Amount
+**Phase 2 (EQ engine)**: bell, low/high shelf, low/high cut, tilt bands, an Amount
 macro and output gain, with analog-matched filters (see [`docs/dsp-decisions.md`](docs/dsp-decisions.md)).
 
 **Phase 3 (gain staging)**: Auto Gain keeps the loudness steady as you EQ, and Compare plays the
 unprocessed sound at the same loudness so you can judge the tone, not the volume.
+
+**Phase 4 (bands & shapes)**: 24 bands, notch and band-pass shapes, 6-96 dB/oct cut slopes, and
+per-band Stereo / Left / Right / Mid / Side placement. Full plan: [`docs/roadmap.md`](docs/roadmap.md).
 There is no custom UI yet: the plugin shows a plain list of its parameters until Phase 5.
 
 | Format | Platforms | DAWs |

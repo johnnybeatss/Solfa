@@ -4,8 +4,8 @@ namespace solfa::params
 {
     namespace
     {
-        // Defaults: a classic layout (shelf, six bells, shelf), all switched off so a fresh
-        // instance is transparent.
+        // Defaults: bands 1-8 form a classic layout (shelf, six bells, shelf); bands 9-24 are
+        // spare bells. All are off, so a fresh instance is transparent.
         struct BandDefault
         {
             dsp::FilterType type;
@@ -13,7 +13,7 @@ namespace solfa::params
             float q;
         };
 
-        constexpr std::array<BandDefault, dsp::numBands> bandDefaults { {
+        constexpr std::array<BandDefault, 8> classicDefaults { {
             { dsp::FilterType::lowShelf, 80.0f, 0.707f },
             { dsp::FilterType::bell, 200.0f, 1.0f },
             { dsp::FilterType::bell, 500.0f, 1.0f },
@@ -23,6 +23,12 @@ namespace solfa::params
             { dsp::FilterType::bell, 8000.0f, 1.0f },
             { dsp::FilterType::highShelf, 12000.0f, 0.707f },
         } };
+
+        BandDefault bandDefault (int b)
+        {
+            return b < (int) classicDefaults.size() ? classicDefaults[(size_t) b]
+                                                    : BandDefault { dsp::FilterType::bell, 1000.0f, 1.0f };
+        }
 
         // Exact logarithmic mapping between [min, max] and [0, 1].
         juce::NormalisableRange<float> logRange (float min, float max)
@@ -48,12 +54,20 @@ namespace solfa::params
     {
         juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
-        const juce::StringArray typeNames { "Bell", "Low Shelf", "High Shelf", "Low Cut", "High Cut", "Tilt" };
+        const juce::StringArray typeNames { "Bell", "Low Shelf", "High Shelf", "Low Cut", "High Cut", "Tilt",
+            "Notch", "Band Pass" };
         jassert (typeNames.size() == dsp::numFilterTypes);
+
+        juce::StringArray slopeNames;
+        for (auto dbPerOct : dsp::slopeOptionsDbPerOct)
+            slopeNames.add (juce::String (dbPerOct) + " dB/oct");
+
+        const juce::StringArray placeNames { "Stereo", "Left", "Right", "Mid", "Side" };
+        jassert (placeNames.size() == dsp::numPlacements);
 
         for (int b = 0; b < dsp::numBands; ++b)
         {
-            const auto& d = bandDefaults[(size_t) b];
+            const auto d = bandDefault (b);
             const auto prefix = "Band " + juce::String (b + 1) + " ";
             auto group = std::make_unique<juce::AudioProcessorParameterGroup> (
                 "band" + juce::String (b + 1), "Band " + juce::String (b + 1), "|");
@@ -75,6 +89,12 @@ namespace solfa::params
 
             group->addChild (std::make_unique<juce::AudioParameterFloat> (
                 juce::ParameterID { bandId (b, q), 1 }, prefix + "Q", logRange (0.1f, 18.0f), d.q));
+
+            group->addChild (std::make_unique<juce::AudioParameterChoice> (
+                juce::ParameterID { bandId (b, slope), 1 }, prefix + "Slope", slopeNames, dsp::defaultSlopeIndex));
+
+            group->addChild (std::make_unique<juce::AudioParameterChoice> (
+                juce::ParameterID { bandId (b, place), 1 }, prefix + "Placement", placeNames, 0));
 
             layout.add (std::move (group));
         }
@@ -110,6 +130,9 @@ namespace solfa::params
         t.frequencyHz = freq->load();
         t.gainDb = gain->load();
         t.q = q->load();
+        const auto slopeIndex = juce::jlimit (0, (int) dsp::slopeOptionsDbPerOct.size() - 1, (int) slope->load());
+        t.slopeDbPerOct = dsp::slopeOptionsDbPerOct[(size_t) slopeIndex];
+        t.placement = (dsp::StereoPlacement) juce::jlimit (0, dsp::numPlacements - 1, (int) place->load());
         return t;
     }
 
@@ -134,6 +157,8 @@ namespace solfa::params
             h.freq = get (bandId (b, freq));
             h.gain = get (bandId (b, gain));
             h.q = get (bandId (b, q));
+            h.slope = get (bandId (b, slope));
+            h.place = get (bandId (b, place));
         }
     }
 }

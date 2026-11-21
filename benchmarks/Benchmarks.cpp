@@ -36,7 +36,7 @@ TEST_CASE ("EQ processing cost")
     PluginProcessor plugin;
     plugin.prepareToPlay (48000.0, 512);
 
-    // All eight bands on with non-zero gain: the worst steady-state case.
+    // Every band on with non-zero gain: the worst steady-state case.
     for (int b = 0; b < solfa::dsp::numBands; ++b)
     {
         auto set = [&] (const char* suffix, float value) {
@@ -56,7 +56,7 @@ TEST_CASE ("EQ processing cost")
     for (int k = 0; k < 10; ++k)
         plugin.processBlock (buffer, midi);
 
-    BENCHMARK ("8 bands, stereo, 512 samples")
+    BENCHMARK ("All bands, stereo, 512 samples")
     {
         plugin.processBlock (buffer, midi);
         return buffer.getSample (0, 0);

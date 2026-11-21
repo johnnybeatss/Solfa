@@ -20,6 +20,8 @@ namespace solfa::params
     inline constexpr auto freq = "freq";
     inline constexpr auto gain = "gain";
     inline constexpr auto q = "q";
+    inline constexpr auto slope = "slope"; // low/high cut steepness
+    inline constexpr auto place = "place"; // Stereo / Left / Right / Mid / Side
 
     juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
 
@@ -31,6 +33,8 @@ namespace solfa::params
         std::atomic<float>* freq = nullptr;
         std::atomic<float>* gain = nullptr;
         std::atomic<float>* q = nullptr;
+        std::atomic<float>* slope = nullptr;
+        std::atomic<float>* place = nullptr;
 
         dsp::BandTarget read() const noexcept;
     };

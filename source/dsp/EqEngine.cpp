@@ -12,29 +12,52 @@ namespace solfa::dsp
         log2Freq.reset (sampleRate, smoothingSeconds);
         gainDb.reset (sampleRate, smoothingSeconds);
         log2Q.reset (sampleRate, smoothingSeconds);
-        cutMix.reset (sampleRate, smoothingSeconds);
+        mixIn.reset (sampleRate, smoothingSeconds);
         firstTarget = true;
         reset();
     }
 
     void EqBand::reset()
     {
-        for (auto& f : filters)
-            f.reset();
+        resetFilters();
         coefficientsDirty = true;
+    }
+
+    void EqBand::resetFilters() noexcept
+    {
+        for (auto& channel : filters)
+            for (auto& f : channel)
+                f.reset();
+    }
+
+    bool EqBand::filtersSilent() const noexcept
+    {
+        for (const auto& channel : filters)
+            for (int i = 0; i < cascade.numSections; ++i)
+                if (! channel[(size_t) i].isSilent())
+                    return false;
+        return true;
     }
 
     bool EqBand::isGainType() const noexcept
     {
-        return type != FilterType::lowCut && type != FilterType::highCut;
+        return type == FilterType::bell || type == FilterType::lowShelf
+            || type == FilterType::highShelf || type == FilterType::tilt;
     }
 
     void EqBand::setTarget (const BandTarget& t, double amount) noexcept
     {
-        if (t.type != type)
+        if (t.type != type || t.slopeDbPerOct != slopeDbPerOct)
         {
             type = t.type;
+            slopeDbPerOct = t.slopeDbPerOct;
             coefficientsDirty = true;
+        }
+
+        if (t.placement != placement)
+        {
+            placement = t.placement;
+            resetFilters(); // the filters now see a different signal
         }
 
         enabled = t.enabled;
@@ -42,7 +65,7 @@ namespace solfa::dsp
         log2Freq.setTargetValue (std::log2 (std::max (t.frequencyHz, 1.0)));
         log2Q.setTargetValue (std::log2 (std::max (t.q, 0.01)));
         gainDb.setTargetValue (enabled && isGainType() ? snapToUnity (t.gainDb * amount) : 0.0);
-        cutMix.setTargetValue (enabled && ! isGainType() ? 1.0 : 0.0);
+        mixIn.setTargetValue (enabled && ! isGainType() ? 1.0 : 0.0);
 
         if (firstTarget)
         {
@@ -56,15 +79,13 @@ namespace solfa::dsp
         log2Freq.setCurrentAndTargetValue (log2Freq.getTargetValue());
         log2Q.setCurrentAndTargetValue (log2Q.getTargetValue());
         gainDb.setCurrentAndTargetValue (gainDb.getTargetValue());
-        cutMix.setCurrentAndTargetValue (cutMix.getTargetValue());
+        mixIn.setCurrentAndTargetValue (mixIn.getTargetValue());
         coefficientsDirty = true;
     }
 
     void EqBand::advance (int numSamples) noexcept
     {
-        const bool moving = log2Freq.isSmoothing() || log2Q.isSmoothing() || gainDb.isSmoothing();
-
-        if (moving)
+        if (log2Freq.isSmoothing() || log2Q.isSmoothing() || gainDb.isSmoothing())
         {
             log2Freq.skip (numSamples);
             log2Q.skip (numSamples);
@@ -75,29 +96,15 @@ namespace solfa::dsp
         if (coefficientsDirty)
             updateCoefficients();
 
+        bool nowActive;
         if (isGainType())
-        {
-            const bool identity = getCoefficients().isIdentity() && ! gainDb.isSmoothing();
-            if (identity && filters[0].isSilent() && filters[1].isSilent())
-            {
-                if (active)
-                    for (auto& f : filters)
-                        f.reset();
-                active = false;
-            }
-            else
-            {
-                active = true;
-            }
-        }
+            nowActive = ! (cascade.isIdentity() && ! gainDb.isSmoothing() && filtersSilent());
         else
-        {
-            const bool off = ! cutMix.isSmoothing() && cutMix.getTargetValue() == 0.0;
-            if (off && active)
-                for (auto& f : filters)
-                    f.reset();
-            active = ! off;
-        }
+            nowActive = mixIn.isSmoothing() || mixIn.getTargetValue() > 0.0;
+
+        if (active && ! nowActive)
+            resetFilters();
+        active = nowActive;
     }
 
     void EqBand::updateCoefficients() noexcept
@@ -108,9 +115,10 @@ namespace solfa::dsp
         s.q = std::exp2 (log2Q.getCurrentValue());
         s.gainDb = gainDb.getCurrentValue();
 
-        const auto c = design (s, sampleRate);
-        for (auto& f : filters)
-            f.setCoefficients (c);
+        cascade = designCascade (s, slopeDbPerOct, sampleRate);
+        for (auto& channel : filters)
+            for (int i = 0; i < cascade.numSections; ++i)
+                channel[(size_t) i].setCoefficients (cascade.sections[(size_t) i]);
 
         coefficientsDirty = false;
         ++version;
@@ -120,47 +128,70 @@ namespace solfa::dsp
     {
         if (! active)
             return false;
-        return isGainType() || cutMix.getTargetValue() > 0.0;
+        return isGainType() || mixIn.getTargetValue() > 0.0;
     }
 
-    void EqBand::process (double* const* channels, int numChannels, int numSamples) noexcept
+    double EqBand::runChain (int channel, double x) noexcept
+    {
+        auto& chain = filters[(size_t) channel];
+        for (int i = 0; i < cascade.numSections; ++i)
+            x = chain[(size_t) i].process (x);
+        return x;
+    }
+
+    void EqBand::process (double* const* ch, int numChannels, int numSamples) noexcept
     {
         if (! active)
             return;
 
-        if (isGainType())
-        {
-            for (int ch = 0; ch < numChannels; ++ch)
-            {
-                auto& f = filters[(size_t) ch];
-                auto* x = channels[ch];
-                for (int i = 0; i < numSamples; ++i)
-                    x[i] = f.process (x[i]);
-            }
-            return;
-        }
+        const bool crossfading = ! isGainType() && mixIn.isSmoothing();
+        const auto steadyMix = isGainType() ? 1.0 : mixIn.getCurrentValue();
 
-        // Cut filters: crossfade in/out on enable/disable (only while the mix is moving).
-        if (! cutMix.isSmoothing() && cutMix.getCurrentValue() == 1.0)
+        // Mono: Left/Right/Mid behave like Stereo; Side of a mono signal is silence (no effect).
+        auto route = placement;
+        if (numChannels < 2)
         {
-            for (int ch = 0; ch < numChannels; ++ch)
-            {
-                auto& f = filters[(size_t) ch];
-                auto* x = channels[ch];
-                for (int i = 0; i < numSamples; ++i)
-                    x[i] = f.process (x[i]);
-            }
-            return;
+            if (route == StereoPlacement::side)
+                return;
+            route = StereoPlacement::stereo;
         }
 
         for (int i = 0; i < numSamples; ++i)
         {
-            const auto mix = cutMix.getNextValue();
-            for (int ch = 0; ch < numChannels; ++ch)
+            const auto mix = crossfading ? mixIn.getNextValue() : steadyMix;
+            auto apply = [&] (int filterChannel, double x) {
+                const auto wet = runChain (filterChannel, x);
+                return mix == 1.0 ? wet : x + mix * (wet - x);
+            };
+
+            switch (route)
             {
-                auto& x = channels[ch][i];
-                const auto wet = filters[(size_t) ch].process (x);
-                x += mix * (wet - x);
+                case StereoPlacement::stereo:
+                    for (int c = 0; c < numChannels; ++c)
+                        ch[c][i] = apply (c, ch[c][i]);
+                    break;
+
+                case StereoPlacement::left:
+                    ch[0][i] = apply (0, ch[0][i]);
+                    break;
+
+                case StereoPlacement::right:
+                    ch[1][i] = apply (1, ch[1][i]);
+                    break;
+
+                case StereoPlacement::mid:
+                case StereoPlacement::side:
+                {
+                    auto m = 0.5 * (ch[0][i] + ch[1][i]);
+                    auto s = 0.5 * (ch[0][i] - ch[1][i]);
+                    if (route == StereoPlacement::mid)
+                        m = apply (0, m);
+                    else
+                        s = apply (0, s);
+                    ch[0][i] = m + s;
+                    ch[1][i] = m - s;
+                    break;
+                }
             }
         }
     }
@@ -186,8 +217,12 @@ namespace solfa::dsp
     {
         double power = 1.0;
         for (const auto& b : bands)
-            if (b.contributesToCurve() && ! b.getCoefficients().isIdentity())
-                power *= powerGain (b.getCoefficients(), frequencyHz, sampleRate);
+        {
+            if (! b.contributesToCurve() || b.getCascade().isIdentity())
+                continue;
+            const auto p = cascadePowerGain (b.getCascade(), frequencyHz, sampleRate);
+            power *= b.getPlacement() == StereoPlacement::stereo ? p : 0.5 * (1.0 + p);
+        }
         return power;
     }
 

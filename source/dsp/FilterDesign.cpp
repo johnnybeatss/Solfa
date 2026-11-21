@@ -19,6 +19,26 @@ namespace solfa::dsp
                 || t == FilterType::highShelf || t == FilterType::tilt;
         }
 
+        // First-order low-pass, analog-matched: exact pole, magnitude fitted at DC and Nyquist.
+        BiquadCoefficients matchedFirstOrderLowPass (double f, double fs) noexcept
+        {
+            const auto w = twoPi * f;
+            const auto a1 = -std::exp (-w / fs);
+            const auto wn = pi * fs;
+            const auto nyquistMag = std::sqrt (w * w / (w * w + wn * wn));
+            const auto sum = 1.0 + a1;                 // b0 + b1 (unity gain at DC)
+            const auto diff = (1.0 - a1) * nyquistMag; // b0 - b1
+            return { 0.5 * (sum + diff), 0.5 * (sum - diff), 0.0, a1, 0.0 };
+        }
+
+        // First-order high-pass, bilinear (consistent with the 12 dB/oct low-cut choice).
+        BiquadCoefficients bilinearFirstOrderHighPass (double f, double fs) noexcept
+        {
+            const auto K = std::tan (pi * f / fs);
+            const auto b0 = 1.0 / (1.0 + K);
+            return { b0, -b0, 0.0, (K - 1.0) / (K + 1.0), 0.0 };
+        }
+
         // A = 10^(g/40), the RBJ cookbook amplitude
         double amplitude (double gainDb) noexcept { return std::pow (10.0, gainDb / 40.0); }
 
@@ -143,6 +163,12 @@ namespace solfa::dsp
 
             case FilterType::highCut:
                 return { 0.0, 0.0, w * w, 1.0, w / q, w * w };
+
+            case FilterType::notch:
+                return { 1.0, 0.0, w * w, 1.0, w / q, w * w };
+
+            case FilterType::bandPass:
+                return { 0.0, w / q, 0.0, 1.0, w / q, w * w };
         }
 
         return {};
@@ -195,6 +221,16 @@ namespace solfa::dsp
 
             case FilterType::highCut:
                 b0 = (1 - c) / 2; b1 = 1 - c; b2 = (1 - c) / 2;
+                a0 = 1 + alpha; a1 = -2 * c; a2 = 1 - alpha;
+                break;
+
+            case FilterType::notch:
+                b0 = 1; b1 = -2 * c; b2 = 1;
+                a0 = 1 + alpha; a1 = -2 * c; a2 = 1 - alpha;
+                break;
+
+            case FilterType::bandPass:
+                b0 = alpha; b1 = 0; b2 = -alpha;
                 a0 = 1 + alpha; a1 = -2 * c; a2 = 1 - alpha;
                 break;
         }
@@ -260,7 +296,9 @@ namespace solfa::dsp
         if (isGainType (s.type) && std::abs (s.gainDb) < 1.0e-9)
             return {}; // exact identity
 
-        if (s.type == FilterType::lowCut)
+        // Low-cut: bilinear measured more accurate where low-cuts are used. Notch: bilinear keeps
+        // the zero exactly on the unit circle, so the notch is truly deep at its frequency.
+        if (s.type == FilterType::lowCut || s.type == FilterType::notch)
             return designBilinear (s, sampleRate);
 
         if (isGainType (s.type) && s.gainDb < 0.0)
@@ -271,6 +309,54 @@ namespace solfa::dsp
         }
 
         return designBestMatched (s, sampleRate);
+    }
+
+    double butterworthSectionQ (int order, int k) noexcept
+    {
+        // Pole-pair angle from the negative real axis: (2k+1)pi/(2n) for even n, (k+1)pi/n for odd n.
+        const auto phi = (order % 2 == 0) ? pi * (2 * k + 1) / (2.0 * order) : pi * (k + 1) / (double) order;
+        return 1.0 / (2.0 * std::cos (phi));
+    }
+
+    CascadeCoefficients designCascade (BandSettings s, int slopeDbPerOct, double sampleRate) noexcept
+    {
+        CascadeCoefficients out;
+
+        if (s.type != FilterType::lowCut && s.type != FilterType::highCut)
+        {
+            out.sections[0] = design (s, sampleRate);
+            return out;
+        }
+
+        s = sanitise (s, sampleRate);
+        const auto order = std::clamp (slopeDbPerOct / 6, 1, 2 * maxSections);
+        const auto numPairs = order / 2;
+        const auto resonance = s.q * std::numbers::sqrt2; // q / 0.7071: 1 at the Butterworth default
+        int n = 0;
+
+        if (order % 2 == 1)
+            out.sections[(size_t) n++] = s.type == FilterType::highCut ? matchedFirstOrderLowPass (s.frequencyHz, sampleRate)
+                                                                        : bilinearFirstOrderHighPass (s.frequencyHz, sampleRate);
+
+        for (int k = 0; k < numPairs; ++k)
+        {
+            auto section = s;
+            section.q = butterworthSectionQ (order, k);
+            if (k == numPairs - 1)
+                section.q *= resonance; // the band's Q sets the corner resonance on the sharpest pair
+            out.sections[(size_t) n++] = design (section, sampleRate);
+        }
+
+        out.numSections = n;
+        return out;
+    }
+
+    double cascadePowerGain (const CascadeCoefficients& c, double frequencyHz, double sampleRate) noexcept
+    {
+        double p = 1.0;
+        for (int i = 0; i < c.numSections; ++i)
+            p *= powerGain (c.sections[(size_t) i], frequencyHz, sampleRate);
+        return p;
     }
 
     double powerGain (const BiquadCoefficients& c, double frequencyHz, double sampleRate) noexcept
