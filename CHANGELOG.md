@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.1 (beta)
+
+- **New look:** a jungle village at night. Moonlit sky with stars, palm and canopy silhouettes,
+  stilt huts with lit doorways, an animated fire and drifting fireflies behind the analyser;
+  carved-wood panels and top bar; stone knobs with glowing arcs; lantern-style band nodes; a
+  glowing torch-gold EQ curve; violet light beams for the solfeggio markers; seed-of-life logo.
+  All artwork is drawn procedurally (no image files) and the static scene is cached, so it costs
+  nothing per frame except the fire and fireflies. Sound and parameters are unchanged.
+
 ## 0.9.0 (beta)
 
 First complete build. Automated tests pass on macOS, Windows and Linux; not yet tested by hand

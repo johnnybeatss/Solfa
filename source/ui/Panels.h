@@ -37,6 +37,9 @@ namespace solfa::ui
         std::unique_ptr<APVTS::ComboBoxAttachment> attachment;
     };
 
+    // Height of a panel's title row; the carved strip sits just below it.
+    inline constexpr float headerHeight = 28.0f;
+
     // Controls for the band selected in the display.
     class BandPanel : public juce::Component
     {

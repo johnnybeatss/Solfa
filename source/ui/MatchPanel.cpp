@@ -1,6 +1,7 @@
 #include "MatchPanel.h"
 #include "../PluginProcessor.h"
 #include "CurveModel.h"
+#include "Scenery.h"
 #include "Theme.h"
 
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -267,9 +268,14 @@ namespace solfa::ui
     {
         g.fillAll (theme::background.withAlpha (0.96f));
         auto r = getLocalBounds().reduced (20, 14);
+        auto heading = r.removeFromTop (24);
+        const auto glyph = heading.removeFromLeft (22).toFloat().getCentre();
+        theme::glow (g, glyph, 18.0f, theme::curve, 0.3f);
+        scenery::drawSeedOfLife (g, glyph, 9.0f, theme::curve, 1.0f);
+        heading.removeFromLeft (6);
         g.setColour (theme::curve);
-        g.setFont (juce::FontOptions (17.0f, juce::Font::bold));
-        g.drawText ("EQ Match", r.removeFromTop (24), juce::Justification::centredLeft);
+        g.setFont (juce::FontOptions (17.0f, juce::Font::bold).withKerningFactor (0.08f));
+        g.drawText ("EQ Match", heading, juce::Justification::centredLeft);
 
         g.setFont (juce::FontOptions (12.0f));
         g.setColour (theme::dimText);
@@ -279,8 +285,7 @@ namespace solfa::ui
 
         // Plot area (between the status line and the controls)
         auto plot = getLocalBounds().reduced (20, 14).withTrimmedTop (48).withTrimmedBottom (78).toFloat();
-        g.setColour (theme::panel);
-        g.fillRect (plot);
+        scenery::drawCarvedPanel (g, plot.expanded (4.0f), theme::curve, 0.0f);
         Mapping m { plot.getWidth(), plot.getHeight(), 15.0 };
         const auto f = dsp::match::logGrid();
         auto path = [&] (const std::vector<double>& c) {

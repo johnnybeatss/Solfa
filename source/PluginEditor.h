@@ -4,6 +4,7 @@
 #include "ui/EqDisplay.h"
 #include "ui/MatchPanel.h"
 #include "ui/Panels.h"
+#include "ui/Scenery.h"
 #include "ui/Theme.h"
 
 class PluginEditor : public juce::AudioProcessorEditor, private juce::Timer
@@ -32,6 +33,8 @@ private:
 
     PluginProcessor& solfaProcessor;
     solfa::ui::theme::LookAndFeel lookAndFeel;
+    solfa::ui::scenery::CachedLayer background; // beam, logo and jungle floor
+    static constexpr int topBarHeight = 50;
 
     // Top bar
     juce::ComboBox presetBox;

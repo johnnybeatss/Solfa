@@ -52,6 +52,7 @@ namespace solfa::ui
 
     void EqDisplay::timerCallback()
     {
+        fireflies.update (1.0f / 30.0f);
         refreshNow();
         repaint();
     }
@@ -149,32 +150,41 @@ namespace solfa::ui
     //==============================================================================
     void EqDisplay::paint (juce::Graphics& g)
     {
-        g.fillAll (theme::background);
         const auto area = plotArea();
         const auto m = mapping();
         auto xOf = [&] (double f) { return area.getX() + m.xForFrequency (f); };
         auto yOf = [&] (double d) { return area.getY() + m.yForDb (d); };
 
-        // Grid
-        g.setFont (juce::FontOptions (10.0f));
-        for (double f : { 20.0, 50.0, 100.0, 200.0, 500.0, 1000.0, 2000.0, 5000.0, 10000.0, 20000.0 })
-        {
-            g.setColour (theme::grid);
-            g.drawVerticalLine (juce::roundToInt (xOf (f)), area.getY(), area.getBottom());
-            g.setColour (theme::gridText);
-            const auto label = f < 1000.0 ? juce::String ((int) f) : juce::String ((int) (f / 1000.0)) + "k";
-            g.drawText (label, juce::Rectangle<float> (xOf (f) - 20, area.getBottom() + 3, 40, 12), juce::Justification::centred);
-        }
-        for (int d = -18; d <= 18; d += 6)
-        {
-            g.setColour (d == 0 ? theme::grid.brighter (0.3f) : theme::grid);
-            g.drawHorizontalLine (juce::roundToInt (yOf (d)), area.getX(), area.getRight());
-            g.setColour (theme::gridText);
-            g.drawText ((d > 0 ? "+" : "") + juce::String (d), juce::Rectangle<float> (area.getX() - 32, yOf (d) - 6, 28, 12),
-                juce::Justification::centredRight);
-        }
+        // Static layer: night scene, canopy and grid (cached; rebuilt only when the size changes)
+        background.draw (g, getLocalBounds(), [&] (juce::Graphics& bg, juce::Rectangle<float> r) {
+            scenery::drawNightScene (bg, r);
+            scenery::drawCanopy (bg, r);
+            bg.setColour (juce::Colours::black.withAlpha (0.18f)); // keep the plot readable over the scene
+            bg.fillRect (area);
+            bg.setFont (juce::FontOptions (10.0f));
+            for (double f : { 20.0, 50.0, 100.0, 200.0, 500.0, 1000.0, 2000.0, 5000.0, 10000.0, 20000.0 })
+            {
+                bg.setColour (theme::grid);
+                bg.drawVerticalLine (juce::roundToInt (xOf (f)), area.getY(), area.getBottom());
+                bg.setColour (theme::gridText);
+                const auto label = f < 1000.0 ? juce::String ((int) f) : juce::String ((int) (f / 1000.0)) + "k";
+                bg.drawText (label, juce::Rectangle<float> (xOf (f) - 20, area.getBottom() + 3, 40, 12), juce::Justification::centred);
+            }
+            for (int d = -18; d <= 18; d += 6)
+            {
+                bg.setColour (d == 0 ? theme::grid.withMultipliedAlpha (2.5f) : theme::grid);
+                bg.drawHorizontalLine (juce::roundToInt (yOf (d)), area.getX(), area.getRight());
+                bg.setColour (theme::gridText);
+                bg.drawText ((d > 0 ? "+" : "") + juce::String (d), juce::Rectangle<float> (area.getX() - 32, yOf (d) - 6, 28, 12),
+                    juce::Justification::centredRight);
+            }
+        });
 
-        // Spectrum (filled)
+        // Animated: the village fire
+        const auto scene = getLocalBounds().toFloat();
+        scenery::drawFire (g, scenery::firePosition (scene), scenery::fireScale (scene), fireflies.getTime());
+
+        // Spectrum: jade mist
         {
             juce::Path spec;
             spec.startNewSubPath (area.getX(), area.getBottom());
@@ -186,22 +196,35 @@ namespace solfa::ui
             }
             spec.lineTo (area.getRight(), area.getBottom());
             spec.closeSubPath();
-            g.setGradientFill (juce::ColourGradient (theme::spectrum.withAlpha (0.35f), 0, area.getY(),
-                theme::spectrum.withAlpha (0.05f), 0, area.getBottom(), false));
+            g.setGradientFill (juce::ColourGradient (theme::spectrum.withAlpha (0.38f), 0, area.getY() + area.getHeight() * 0.3f,
+                theme::spectrum.withAlpha (0.04f), 0, area.getBottom(), false));
             g.fillPath (spec);
+            g.setColour (theme::spectrum.withAlpha (0.35f));
+            g.strokePath (spec, juce::PathStrokeType (1.0f));
         }
 
-        // Solfeggio markers and the Focus
+        fireflies.draw (g, scene);
+
+        // Solfeggio markers: faint violet light beams with a diamond glyph at the top
         const auto refIndex = juce::jlimit (0, 2, (int) handles.tuneRef->load());
         const auto reference = dsp::referenceOptionsHz[(size_t) refIndex];
         for (auto f : solfeggio)
         {
             const auto x = xOf (f);
-            g.setColour (theme::marker.withAlpha (0.35f));
-            const float dashes[] = { 3.0f, 4.0f };
-            g.drawDashedLine ({ x, area.getY(), x, area.getBottom() }, dashes, 2, 1.0f);
+            g.setGradientFill (juce::ColourGradient (theme::marker.withAlpha (0.42f), x, area.getY(), theme::marker.withAlpha (0.0f), x,
+                area.getBottom(), false));
+            g.fillRect (x - 0.5f, area.getY(), 1.0f, area.getHeight());
+            juce::Path d;
+            d.startNewSubPath (x, area.getY() - 3.0f);
+            d.lineTo (x + 3.0f, area.getY());
+            d.lineTo (x, area.getY() + 3.0f);
+            d.lineTo (x - 3.0f, area.getY());
+            d.closeSubPath();
+            theme::glow (g, { x, area.getY() }, 7.0f, theme::marker, 0.35f);
+            g.setColour (theme::marker);
+            g.fillPath (d);
         }
-        g.setColour (theme::marker.withAlpha (0.8f));
+        g.setColour (theme::marker.withAlpha (0.9f));
         g.setFont (juce::FontOptions (9.0f));
         {
             // Place each label on the first of three rows where it doesn't overlap its neighbour.
@@ -218,13 +241,18 @@ namespace solfa::ui
             }
         }
         {
+            // The Focus: an ember beam
             const auto focus = processor.getEffectiveFocusHz();
             const auto x = xOf (focus);
-            g.setColour (theme::focus.withAlpha (0.8f));
+            g.setColour (theme::focus.withAlpha (0.16f));
+            g.fillRect (x - 2.5f, area.getY(), 5.0f, area.getHeight());
+            g.setColour (theme::focus.withAlpha (0.9f));
             g.drawVerticalLine (juce::roundToInt (x), area.getY(), area.getBottom());
-            g.setFont (juce::FontOptions (10.0f));
+            theme::glow (g, { x, area.getY() }, 10.0f, theme::focus, 0.5f);
+            g.setColour (theme::focus); // glow() leaves a gradient fill set
+            g.setFont (juce::FontOptions (10.0f, juce::Font::bold));
             g.drawText ("Focus " + formatHz (focus) + "  " + noteName (focus, reference),
-                juce::Rectangle<float> (x + 4, area.getBottom() - 16, 160, 12), juce::Justification::centredLeft);
+                juce::Rectangle<float> (x + 5, area.getBottom() - 16, 170, 12), juce::Justification::centredLeft);
         }
 
         // Per-band fills and dynamic swing
@@ -270,10 +298,16 @@ namespace solfa::ui
             }
         }
 
-        // Total curve
-        g.setColour (theme::curve);
-        g.strokePath (curvePath ([&] (double f) { return model.totalDb (f); }),
-            juce::PathStrokeType (2.2f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        // Total curve: torchlight with a soft glow
+        {
+            const auto total = curvePath ([&] (double f) { return model.totalDb (f); });
+            g.setColour (theme::curve.withAlpha (0.08f));
+            g.strokePath (total, juce::PathStrokeType (10.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+            g.setColour (theme::curve.withAlpha (0.2f));
+            g.strokePath (total, juce::PathStrokeType (5.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+            g.setColour (theme::curve.brighter (0.15f));
+            g.strokePath (total, juce::PathStrokeType (2.2f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        }
         g.restoreState();
 
         // Nodes
@@ -283,9 +317,13 @@ namespace solfa::ui
                 continue;
             const auto pos = nodePosition (b);
             const auto r = b == selected ? 8.0f : 6.5f;
-            g.setColour (theme::band (b));
+            const auto colour = theme::band (b);
+            // Lantern: glow, then a lit orb brighter at its centre
+            theme::glow (g, pos, r * (b == selected ? 3.2f : 2.5f), colour, b == selected ? 0.55f : 0.4f);
+            g.setGradientFill (juce::ColourGradient (colour.brighter (0.6f), pos.x - r * 0.3f, pos.y - r * 0.3f, colour.darker (0.2f),
+                pos.x + r, pos.y + r, true));
             g.fillEllipse (pos.x - r, pos.y - r, 2 * r, 2 * r);
-            g.setColour (theme::background);
+            g.setColour (juce::Colour (0xff120a04));
             g.setFont (juce::FontOptions (9.0f, juce::Font::bold));
             g.drawText (juce::String (b + 1), juce::Rectangle<float> (pos.x - r, pos.y - r, 2 * r, 2 * r), juce::Justification::centred);
             if (b == selected)
@@ -332,7 +370,7 @@ namespace solfa::ui
             g.drawText (note, area.reduced (8, 6).removeFromTop (14), juce::Justification::centredRight);
         }
 
-        g.setColour (theme::panelEdge);
+        g.setColour (theme::panelEdge.withAlpha (0.7f));
         g.drawRect (area, 1.0f);
     }
 

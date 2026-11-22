@@ -1,6 +1,7 @@
 #include "Panels.h"
 #include "../PluginProcessor.h"
 #include "../dsp/Tuning.h"
+#include "Scenery.h"
 #include "Theme.h"
 
 #include <cmath>
@@ -107,19 +108,27 @@ namespace solfa::ui
 
     void BandPanel::paint (juce::Graphics& g)
     {
-        g.setColour (theme::panel);
-        g.fillRoundedRectangle (getLocalBounds().toFloat(), 6.0f);
-        g.setColour (band >= 0 ? theme::band (band) : theme::dimText);
-        g.setFont (juce::FontOptions (13.0f, juce::Font::bold));
-        g.drawText (band >= 0 ? "Band " + juce::String (band + 1) : "Band", getLocalBounds().reduced (10, 6).removeFromTop (18),
-            juce::Justification::centredLeft);
+        const auto accent = band >= 0 ? theme::band (band) : theme::curve;
+        scenery::drawCarvedPanel (g, getLocalBounds().toFloat(), accent, headerHeight);
+        auto title = getLocalBounds().reduced (12, 6).removeFromTop (18);
+        if (band >= 0)
+        {
+            const auto c = title.removeFromLeft (14).toFloat().getCentre();
+            theme::glow (g, c, 9.0f, accent, 0.5f);
+            g.setColour (accent);
+            g.fillEllipse (c.x - 4.0f, c.y - 4.0f, 8.0f, 8.0f);
+            title.removeFromLeft (4);
+        }
+        g.setColour (band >= 0 ? accent : theme::dimText);
+        g.setFont (juce::FontOptions (12.5f, juce::Font::bold).withKerningFactor (0.12f));
+        g.drawText (band >= 0 ? "BAND " + juce::String (band + 1) : "BAND", title, juce::Justification::centredLeft);
         if (band < 0)
         {
             g.setColour (theme::dimText);
             g.setFont (juce::FontOptions (12.0f));
             g.drawFittedText ("Double-click the display to add a band. Drag a node to move it, use the wheel for Q, "
                               "right-click for more, Alt-click to grab a spectrum peak.",
-                getLocalBounds().reduced (14, 30), juce::Justification::topLeft, 4);
+                getLocalBounds().reduced (16, 38), juce::Justification::topLeft, 4);
         }
     }
 
@@ -127,7 +136,8 @@ namespace solfa::ui
     {
         auto r = getLocalBounds().reduced (10, 6);
         auto header = r.removeFromTop (20);
-        header.removeFromLeft (70);
+        r.removeFromTop ((int) headerHeight - 22); // room for the carved strip (header ends at 26)
+        header.removeFromLeft (88);
         on.setBounds (header.removeFromLeft (50));
         dynamic.setBounds (header.removeFromLeft (80));
 
@@ -187,18 +197,23 @@ namespace solfa::ui
 
     void SpiritPanel::paint (juce::Graphics& g)
     {
-        g.setColour (theme::panel);
-        g.fillRoundedRectangle (getLocalBounds().toFloat(), 6.0f);
+        scenery::drawCarvedPanel (g, getLocalBounds().toFloat(), theme::focus, headerHeight);
+        auto title = getLocalBounds().reduced (12, 6).removeFromTop (18);
+        const auto c = title.removeFromLeft (16).toFloat().getCentre();
+        theme::glow (g, c, 12.0f, theme::focus, 0.35f);
+        scenery::drawSeedOfLife (g, c, 7.0f, theme::focus, 0.9f);
+        title.removeFromLeft (6);
         g.setColour (theme::focus);
-        g.setFont (juce::FontOptions (13.0f, juce::Font::bold));
-        g.drawText ("Focus & Resonance", getLocalBounds().reduced (10, 6).removeFromTop (18), juce::Justification::centredLeft);
+        g.setFont (juce::FontOptions (12.5f, juce::Font::bold).withKerningFactor (0.12f));
+        g.drawText ("FOCUS & RESONANCE", title, juce::Justification::centredLeft);
     }
 
     void SpiritPanel::resized()
     {
         auto r = getLocalBounds().reduced (10, 6);
         auto header = r.removeFromTop (20);
-        header.removeFromLeft (150);
+        r.removeFromTop ((int) headerHeight - 22); // room for the carved strip (header ends at 26)
+        header.removeFromLeft (180);
         focusReadout.setBounds (header);
 
         auto combos = r.removeFromTop (38);
@@ -218,11 +233,17 @@ namespace solfa::ui
 
     void SciencePanel::paint (juce::Graphics& g)
     {
-        g.fillAll (theme::background.withAlpha (0.94f));
+        g.fillAll (theme::background.withAlpha (0.95f));
+        scenery::drawCanopy (g, getLocalBounds().toFloat());
         auto r = getLocalBounds().reduced (40, 30);
+        auto heading = r.removeFromTop (28);
+        const auto c = heading.removeFromLeft (28).toFloat().getCentre();
+        theme::glow (g, c, 22.0f, theme::curve, 0.3f);
+        scenery::drawSeedOfLife (g, c, 11.0f, theme::curve, 1.0f);
+        heading.removeFromLeft (8);
         g.setColour (theme::curve);
-        g.setFont (juce::FontOptions (18.0f, juce::Font::bold));
-        g.drawText ("About the science", r.removeFromTop (28), juce::Justification::centredLeft);
+        g.setFont (juce::FontOptions (18.0f, juce::Font::bold).withKerningFactor (0.08f));
+        g.drawText ("About the science", heading, juce::Justification::centredLeft);
         g.setColour (theme::text);
         g.setFont (juce::FontOptions (13.0f));
         const juce::String text =

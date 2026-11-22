@@ -134,19 +134,49 @@ void PluginEditor::refreshPresetBox()
 
 void PluginEditor::paint (juce::Graphics& g)
 {
-    g.fillAll (ui::theme::background);
-    g.setColour (ui::theme::text);
-    g.setFont (juce::FontOptions (22.0f, juce::Font::bold));
-    g.drawText ("Solfa", juce::Rectangle<int> (16, 8, 90, 32), juce::Justification::centredLeft);
-    g.setColour (ui::theme::dimText);
-    g.setFont (juce::FontOptions (10.0f));
-    g.drawText (juce::String ("v") + VERSION, juce::Rectangle<int> (86, 20, 60, 14), juce::Justification::centredLeft);
+    background.draw (g, getLocalBounds(), [] (juce::Graphics& bg, juce::Rectangle<float> r) {
+        namespace theme = ui::theme;
+        // Jungle floor behind the panels
+        bg.setGradientFill (juce::ColourGradient (juce::Colour (0xff0c1712), 0, r.getY(), juce::Colour (0xff040907), 0, r.getBottom(), false));
+        bg.fillRect (r);
+
+        // Top bar: a carved wooden beam
+        const auto beam = r.removeFromTop ((float) topBarHeight);
+        bg.setGradientFill (juce::ColourGradient (theme::panel.brighter (0.2f), 0, beam.getY(), theme::panel.darker (0.45f), 0,
+            beam.getBottom(), false));
+        bg.fillRect (beam);
+        juce::Random rng (5);
+        for (float y = beam.getY() + 4.0f; y < beam.getBottom() - 6.0f; y += 5.0f + 4.0f * rng.nextFloat())
+        {
+            juce::Path grain;
+            grain.startNewSubPath (beam.getX(), y);
+            for (float x = 60.0f; x < beam.getRight() + 60.0f; x += 60.0f)
+                grain.quadraticTo (x - 30.0f, y + (rng.nextFloat() - 0.5f) * 3.0f, x, y);
+            bg.setColour (juce::Colour (0xffffe2b8).withAlpha (0.025f));
+            bg.strokePath (grain, juce::PathStrokeType (1.0f));
+        }
+        bg.setColour (theme::panelEdge);
+        bg.drawHorizontalLine ((int) beam.getBottom() - 1, beam.getX(), beam.getRight());
+        ui::scenery::drawCarvedBand (bg, { beam.getX() + 8.0f, beam.getBottom() - 6.0f, beam.getWidth() - 16.0f, 3.5f },
+            theme::curve.withAlpha (0.25f));
+
+        // Logo: seed of life with a warm glow, and the name in torch gold
+        const juce::Point<float> logo { 27.0f, 23.0f };
+        theme::glow (bg, logo, 26.0f, theme::curve, 0.3f);
+        ui::scenery::drawSeedOfLife (bg, logo, 13.0f, theme::curve, 1.2f);
+        bg.setGradientFill (juce::ColourGradient (juce::Colour (0xffffe3a3), 0, 8.0f, juce::Colour (0xffe08a2c), 0, 30.0f, false));
+        bg.setFont (juce::FontOptions (21.0f, juce::Font::bold).withKerningFactor (0.2f));
+        bg.drawText ("SOLFA", juce::Rectangle<float> (47, 5, 100, 26), juce::Justification::centredLeft);
+        bg.setColour (theme::dimText);
+        bg.setFont (juce::FontOptions (9.5f).withKerningFactor (0.1f));
+        bg.drawText (juce::String ("v") + VERSION, juce::Rectangle<float> (48, 29, 90, 11), juce::Justification::centredLeft);
+    });
 }
 
 void PluginEditor::resized()
 {
     auto r = getLocalBounds();
-    auto top = r.removeFromTop (48).reduced (8, 8);
+    auto top = r.removeFromTop (topBarHeight).reduced (8, 9);
     top.removeFromLeft (140);
     prevPreset.setBounds (top.removeFromLeft (28));
     presetBox.setBounds (top.removeFromLeft (180).reduced (4, 0));

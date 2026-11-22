@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CurveModel.h"
+#include "Scenery.h"
 #include "Spectrum.h"
 
 #include <functional>
@@ -61,6 +62,8 @@ namespace solfa::ui
         CurveModel model;
         Spectrum spectrum;
         std::vector<float> pullBuffer;
+        scenery::CachedLayer background; // night scene + grid, re-rendered only on resize
+        scenery::Fireflies fireflies { 26 };
 
         int selected = -1;
         int dragging = -1;

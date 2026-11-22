@@ -11,7 +11,7 @@ evidence does and doesn't support, is in [`docs/research/`](docs/research/).
 
 ![Solfa](docs/images/editor.png)
 
-**Status: 0.9.0 beta.** Every feature is built and tested automatically on macOS, Windows and
+**Status: 0.9.1 beta.** Every feature is built and tested automatically on macOS, Windows and
 Linux, but it has not yet been tried by hand in real DAWs. Please work through
 [`docs/testing-checklist.md`](docs/testing-checklist.md) and note anything odd.
 
@@ -38,8 +38,10 @@ Linux, but it has not yet been tried by hand in real DAWs. Please work through
 | Right-click a node | Shape, slope, stereo placement, Dynamic, remove |
 | Alt-click | Spectrum Grab: add a band on the nearest peak in the analyser |
 
-The gold line is the overall EQ; each band's own curve is shaded in its colour. Dashed violet
-lines mark the solfeggio numbers (174 ... 963) and 432; the amber line is the Focus.
+The glowing gold line is the overall EQ; each band is a lantern in its own colour, with its
+curve shaded behind it. Violet light beams mark the solfeggio numbers (174 ... 963) and 432; the
+ember-red beam is the Focus. The scene behind (a jungle village at night: moon, palms, stilt huts,
+a fire and fireflies) is drawn in code and stays dim so the curves remain easy to read.
 
 ### Bands
 
