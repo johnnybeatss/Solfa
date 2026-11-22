@@ -71,6 +71,15 @@ clap_juce_extensions_plugin(TARGET "${PROJECT_NAME}"
     CLAP_ID "${BUNDLE_ID}"
     CLAP_FEATURES audio-effect equalizer stereo mono)
 
+# Bundled fonts (SIL Open Font License 1.1, licences alongside), compiled in as binary data
+juce_add_binary_data(SolfaFonts
+    HEADER_NAME SolfaFonts.h
+    NAMESPACE SolfaFonts
+    SOURCES
+    assets/fonts/UncialAntiqua-Regular.ttf
+    assets/fonts/Macondo-Regular.ttf)
+set_target_properties(SolfaFonts PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
+
 # Plugin code shared by the plugin targets and the Tests target (avoids ODR violations)
 add_library(SharedCode INTERFACE)
 pamplejuce_shared_code_defaults()   # C++23, fast math off for tests, etc.
@@ -98,6 +107,7 @@ target_link_libraries(SharedCode
     juce_dsp
     juce_gui_basics
     juce_gui_extra
+    SolfaFonts
     juce::juce_recommended_config_flags
     juce::juce_recommended_warning_flags)
 

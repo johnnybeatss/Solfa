@@ -2,12 +2,31 @@
 
 #include <cmath>
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "SolfaFonts.h"
 
 // Solfa's own visual identity: a mystical jungle village at night. Indigo sky with an aurora,
 // amethyst-stained wood, sacred-gold curve, aqua spirit-mist analyser, amethyst solfeggio markers,
 // rose-flame Focus, spirit lights.
 namespace solfa::ui::theme
 {
+    // Bundled typefaces (SIL Open Font License 1.1; licences in assets/fonts): Uncial Antiqua for the
+    // logo and headings, Macondo for all other text. One shared copy for every editor instance.
+    struct Fonts
+    {
+        static juce::Typeface::Ptr load (const char* data, int size)
+        {
+            return juce::Typeface::createSystemTypefaceFor (data, (size_t) size);
+        }
+        juce::Typeface::Ptr display = load (SolfaFonts::UncialAntiquaRegular_ttf, SolfaFonts::UncialAntiquaRegular_ttfSize);
+        juce::Typeface::Ptr text = load (SolfaFonts::MacondoRegular_ttf, SolfaFonts::MacondoRegular_ttfSize);
+    };
+
+    // Heading font (logo, panel titles). Body text uses Macondo automatically via the LookAndFeel.
+    inline juce::FontOptions displayFont (float height)
+    {
+        return juce::FontOptions (juce::SharedResourcePointer<Fonts>()->display).withHeight (height);
+    }
+
     inline const juce::Colour background { 0xff0a0816 }; // indigo night
     inline const juce::Colour panel { 0xff1b1329 };      // amethyst-stained wood
     inline const juce::Colour panelEdge { 0xff5c4683 };  // violet rim
@@ -43,6 +62,11 @@ namespace solfa::ui::theme
     public:
         LookAndFeel()
         {
+            // JUCE resolves default (unnamed) fonts through the *default* LookAndFeel, so set Macondo
+            // there as well as here; it then applies to labels, menus, combo boxes and tooltips.
+            setDefaultSansSerifTypeface (fonts->text);
+            juce::LookAndFeel::getDefaultLookAndFeel().setDefaultSansSerifTypeface (fonts->text);
+
             setColour (juce::ResizableWindow::backgroundColourId, background);
             setColour (juce::Slider::textBoxTextColourId, text);
             setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
@@ -214,5 +238,8 @@ namespace solfa::ui::theme
             g.setColour (thumb.brighter (0.3f));
             g.fillEllipse (pos - 4.0f, cy - 4.0f, 8.0f, 8.0f);
         }
+
+    private:
+        juce::SharedResourcePointer<Fonts> fonts;
     };
 }

@@ -13,7 +13,7 @@ namespace solfa::ui
     {
         label.setText (labelText, juce::dontSendNotification);
         label.setJustificationType (juce::Justification::centred);
-        label.setFont (juce::FontOptions (11.0f));
+        label.setFont (juce::FontOptions (12.0f));
         slider.setTextBoxStyle (juce::Slider::TextBoxBelow, false, 76, 14);
         slider.setColour (juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
         slider.setColour (juce::Slider::textBoxBackgroundColourId, juce::Colours::transparentBlack);
@@ -38,7 +38,7 @@ namespace solfa::ui
     Choice::Choice (const juce::String& labelText, const juce::StringArray& items)
     {
         label.setText (labelText, juce::dontSendNotification);
-        label.setFont (juce::FontOptions (11.0f));
+        label.setFont (juce::FontOptions (12.0f));
         box.addItemList (items, 1);
         addAndMakeVisible (box);
         addAndMakeVisible (label);
@@ -120,12 +120,20 @@ namespace solfa::ui
             title.removeFromLeft (4);
         }
         g.setColour (band >= 0 ? accent : theme::dimText);
-        g.setFont (juce::FontOptions (12.5f, juce::Font::bold).withKerningFactor (0.12f));
-        g.drawText (band >= 0 ? "BAND " + juce::String (band + 1) : "BAND", title, juce::Justification::centredLeft);
+        // Uncial's "1" reads like an "i", so the band number is set in the body font
+        const juce::Font heading (theme::displayFont (14.0f).withKerningFactor (0.06f));
+        g.setFont (heading);
+        g.drawText ("BAND", title, juce::Justification::centredLeft);
+        if (band >= 0)
+        {
+            title.removeFromLeft ((int) std::ceil (juce::GlyphArrangement::getStringWidth (heading, "BAND ")));
+            g.setFont (juce::FontOptions (15.0f));
+            g.drawText (juce::String (band + 1), title, juce::Justification::centredLeft);
+        }
         if (band < 0)
         {
             g.setColour (theme::dimText);
-            g.setFont (juce::FontOptions (12.0f));
+            g.setFont (juce::FontOptions (13.0f));
             g.drawFittedText ("Double-click the display to add a band. Drag a node to move it, use the wheel for Q, "
                               "right-click for more, Alt-click to grab a spectrum peak.",
                 getLocalBounds().reduced (16, 38), juce::Justification::topLeft, 4);
@@ -204,7 +212,7 @@ namespace solfa::ui
         scenery::drawSeedOfLife (g, c, 7.0f, theme::focus, 0.9f);
         title.removeFromLeft (6);
         g.setColour (theme::focus);
-        g.setFont (juce::FontOptions (12.5f, juce::Font::bold).withKerningFactor (0.12f));
+        g.setFont (theme::displayFont (14.0f).withKerningFactor (0.06f));
         g.drawText ("FOCUS & RESONANCE", title, juce::Justification::centredLeft);
     }
 
@@ -242,7 +250,7 @@ namespace solfa::ui
         scenery::drawSeedOfLife (g, c, 11.0f, theme::curve, 1.0f);
         heading.removeFromLeft (8);
         g.setColour (theme::curve);
-        g.setFont (juce::FontOptions (18.0f, juce::Font::bold).withKerningFactor (0.08f));
+        g.setFont (theme::displayFont (20.0f).withKerningFactor (0.04f));
         g.drawText ("About the science", heading, juce::Justification::centredLeft);
         g.setColour (theme::text);
         g.setFont (juce::FontOptions (13.0f));

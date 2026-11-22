@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.3 (beta)
+
+- **New fonts:** Uncial Antiqua (an old uncial-style script) for the logo and headings, and
+  Macondo (a hand-drawn, slightly odd face) for every other label, value, menu and tooltip. Both
+  are bundled in the plugin under the SIL Open Font License, so they look the same on every
+  computer. Small text sizes were raised about one point because Macondo's lowercase is short.
+  Band numbers in panel titles use Macondo, since Uncial's "1" reads like an "i".
+
 ## 0.9.2 (beta)
 
 - **More mystical colours:** indigo-violet night sky with a faint aqua and violet aurora,

@@ -274,10 +274,10 @@ namespace solfa::ui
         scenery::drawSeedOfLife (g, glyph, 9.0f, theme::curve, 1.0f);
         heading.removeFromLeft (6);
         g.setColour (theme::curve);
-        g.setFont (juce::FontOptions (17.0f, juce::Font::bold).withKerningFactor (0.08f));
+        g.setFont (theme::displayFont (19.0f).withKerningFactor (0.04f));
         g.drawText ("EQ Match", heading, juce::Justification::centredLeft);
 
-        g.setFont (juce::FontOptions (12.0f));
+        g.setFont (juce::FontOptions (13.0f));
         g.setColour (theme::dimText);
         g.drawText ("Reference: " + referenceName + "  (" + juce::String (reference->getSecondsAnalysed(), 1) + " s)   |   Current: "
                         + juce::String (current->getSecondsAnalysed(), 1) + " s analysed",
@@ -322,19 +322,19 @@ namespace solfa::ui
             g.fillPath (dashed);
             g.setColour (theme::curve);
             g.strokePath (path (fit.response), juce::PathStrokeType (2.2f));
-            g.setFont (juce::FontOptions (11.0f));
+            g.setFont (juce::FontOptions (12.0f));
             g.drawText (juce::String (fit.numBands) + " bands", plot.reduced (6).removeFromTop (14), juce::Justification::topRight);
         }
         else
         {
             g.setColour (theme::dimText);
-            g.setFont (juce::FontOptions (13.0f));
+            g.setFont (juce::FontOptions (14.0f));
             g.drawFittedText ("1. Load a reference file, or press Learn reference and play the reference through Solfa.\n"
                               "2. Press Learn current and play your own track for 10-30 seconds.\n"
                               "3. Adjust Amount and Smoothing, then Apply match: Solfa creates normal bands you can tweak.",
                 plot.reduced (16).toNearestInt(), juce::Justification::centred, 4);
         }
-        g.setFont (juce::FontOptions (10.0f));
+        g.setFont (juce::FontOptions (11.0f));
         g.setColour (theme::accent);
         g.drawText ("reference", plot.reduced (6).removeFromBottom (12), juce::Justification::bottomLeft);
         g.setColour (theme::spectrum);

@@ -161,7 +161,7 @@ namespace solfa::ui
             scenery::drawCanopy (bg, r);
             bg.setColour (juce::Colours::black.withAlpha (0.18f)); // keep the plot readable over the scene
             bg.fillRect (area);
-            bg.setFont (juce::FontOptions (10.0f));
+            bg.setFont (juce::FontOptions (11.0f));
             for (double f : { 20.0, 50.0, 100.0, 200.0, 500.0, 1000.0, 2000.0, 5000.0, 10000.0, 20000.0 })
             {
                 bg.setColour (theme::grid);
@@ -225,7 +225,7 @@ namespace solfa::ui
             g.fillPath (d);
         }
         g.setColour (theme::marker.withAlpha (0.9f));
-        g.setFont (juce::FontOptions (9.0f));
+        g.setFont (juce::FontOptions (10.0f));
         {
             // Place each label on the first of three rows where it doesn't overlap its neighbour.
             std::array<float, 3> rowEnd { -1.0e9f, -1.0e9f, -1.0e9f };
@@ -250,7 +250,7 @@ namespace solfa::ui
             g.drawVerticalLine (juce::roundToInt (x), area.getY(), area.getBottom());
             theme::glow (g, { x, area.getY() }, 10.0f, theme::focus, 0.5f);
             g.setColour (theme::focus); // glow() leaves a gradient fill set
-            g.setFont (juce::FontOptions (10.0f, juce::Font::bold));
+            g.setFont (juce::FontOptions (11.5f));
             g.drawText ("Focus " + formatHz (focus) + "  " + noteName (focus, reference),
                 juce::Rectangle<float> (x + 5, area.getBottom() - 16, 170, 12), juce::Justification::centredLeft);
         }
@@ -324,7 +324,7 @@ namespace solfa::ui
                 pos.x + r, pos.y + r, true));
             g.fillEllipse (pos.x - r, pos.y - r, 2 * r, 2 * r);
             g.setColour (juce::Colour (0xff140a22));
-            g.setFont (juce::FontOptions (9.0f, juce::Font::bold));
+            g.setFont (juce::FontOptions (10.5f));
             g.drawText (juce::String (b + 1), juce::Rectangle<float> (pos.x - r, pos.y - r, 2 * r, 2 * r), juce::Justification::centred);
             if (b == selected)
             {
@@ -335,7 +335,7 @@ namespace solfa::ui
                 if (dsp::isGainTypeFor (t.type))
                     info << "  " << (t.gainDb > 0 ? "+" : "") << juce::String (t.gainDb, 1) << " dB";
                 info << "  Q " << juce::String (t.q, 2);
-                g.setFont (juce::FontOptions (11.0f));
+                g.setFont (juce::FontOptions (12.0f));
                 g.drawText (info, juce::Rectangle<float> (pos.x + 12, pos.y - 22, 200, 14), juce::Justification::centredLeft);
             }
         }
@@ -347,7 +347,7 @@ namespace solfa::ui
             const auto x = xOf (f);
             g.setColour (theme::spectrum);
             g.drawVerticalLine (juce::roundToInt (x), area.getY(), area.getBottom());
-            g.setFont (juce::FontOptions (11.0f));
+            g.setFont (juce::FontOptions (12.0f));
             g.drawText ("Grab " + formatHz (f), juce::Rectangle<float> (x + 4, area.getY() + 4, 120, 14), juce::Justification::centredLeft);
         }
 
@@ -366,7 +366,7 @@ namespace solfa::ui
             if (changed)
                 note << "  |  Dynamic and Left/Right/Mid/Side bands act as static stereo bands in this mode";
             g.setColour (theme::accent);
-            g.setFont (juce::FontOptions (11.0f));
+            g.setFont (juce::FontOptions (12.0f));
             g.drawText (note, area.reduced (8, 6).removeFromTop (14), juce::Justification::centredRight);
         }
 

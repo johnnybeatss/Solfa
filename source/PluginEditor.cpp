@@ -165,10 +165,10 @@ void PluginEditor::paint (juce::Graphics& g)
         theme::glow (bg, logo, 26.0f, theme::curve, 0.3f);
         ui::scenery::drawSeedOfLife (bg, logo, 13.0f, theme::curve, 1.2f);
         bg.setGradientFill (juce::ColourGradient (juce::Colour (0xfffff0c8), 0, 8.0f, juce::Colour (0xffd99a45), 0, 30.0f, false));
-        bg.setFont (juce::FontOptions (21.0f, juce::Font::bold).withKerningFactor (0.2f));
+        bg.setFont (solfa::ui::theme::displayFont (23.0f).withKerningFactor (0.12f));
         bg.drawText ("SOLFA", juce::Rectangle<float> (47, 5, 100, 26), juce::Justification::centredLeft);
         bg.setColour (theme::dimText);
-        bg.setFont (juce::FontOptions (9.5f).withKerningFactor (0.1f));
+        bg.setFont (juce::FontOptions (10.5f).withKerningFactor (0.1f));
         bg.drawText (juce::String ("v") + VERSION, juce::Rectangle<float> (48, 29, 90, 11), juce::Justification::centredLeft);
     });
 }

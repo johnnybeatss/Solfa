@@ -11,7 +11,7 @@ evidence does and doesn't support, is in [`docs/research/`](docs/research/).
 
 ![Solfa](docs/images/editor.png)
 
-**Status: 0.9.2 beta.** Every feature is built and tested automatically on macOS, Windows and
+**Status: 0.9.3 beta.** Every feature is built and tested automatically on macOS, Windows and
 Linux, but it has not yet been tried by hand in real DAWs. Please work through
 [`docs/testing-checklist.md`](docs/testing-checklist.md) and note anything odd.
 
@@ -140,3 +140,8 @@ template (MIT, see `LICENSE-pamplejuce.txt`); CLAP support via
 JUCE licence may be required if Solfa is ever sold or earns over the Starter limit. Check
 [juce.com](https://juce.com/get-juce) before distributing. "VST" is a Steinberg trademark and is
 not used in the product name.
+
+Fonts, compiled into the plugin: [Uncial Antiqua](https://fonts.google.com/specimen/Uncial+Antiqua)
+by Astigmatic (headings and logo) and [Macondo](https://fonts.google.com/specimen/Macondo) by John
+Vargas Beltrán (all other text), both under the SIL Open Font License 1.1. The licence texts are in
+`assets/fonts/`; ship them with any installer or download.
