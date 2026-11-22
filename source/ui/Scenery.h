@@ -4,7 +4,7 @@
 #include <functional>
 #include <vector>
 
-// Procedural artwork for Solfa's "jungle village at night" look: moonlit sky, canopy and
+// Procedural artwork for Solfa's "jungle village at night" look: indigo sky with an aurora, canopy and
 // stilt-hut silhouettes, firelight, fireflies, carved-wood panels and a seed-of-life glyph.
 // Everything is drawn with paths and gradients (no bitmaps), so it scales to any size.
 namespace solfa::ui::scenery

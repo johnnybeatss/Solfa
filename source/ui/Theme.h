@@ -3,30 +3,31 @@
 #include <cmath>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-// Solfa's own visual identity: an old jungle village at night. Moonlit sky, carved dark wood,
-// torch-gold curve, jade mist analyser, orchid-violet solfeggio markers, ember Focus, fireflies.
+// Solfa's own visual identity: a mystical jungle village at night. Indigo sky with an aurora,
+// amethyst-stained wood, sacred-gold curve, aqua spirit-mist analyser, amethyst solfeggio markers,
+// rose-flame Focus, spirit lights.
 namespace solfa::ui::theme
 {
-    inline const juce::Colour background { 0xff07100c }; // jungle night
-    inline const juce::Colour panel { 0xff1d150e };      // dark carved wood
-    inline const juce::Colour panelEdge { 0xff5b3f25 };  // wood rim
-    inline const juce::Colour grid { 0x24a8d5c0 };       // faint moonlit lines (translucent)
-    inline const juce::Colour gridText { 0xff86ab9b };
-    inline const juce::Colour text { 0xfff3e7cc };       // parchment
-    inline const juce::Colour dimText { 0xffb3a585 };
-    inline const juce::Colour curve { 0xffffb547 };      // torch gold
-    inline const juce::Colour spectrum { 0xff58d1ad };   // jade mist
-    inline const juce::Colour marker { 0xffbf9dff };     // orchid violet
-    inline const juce::Colour focus { 0xffff6a3d };      // ember
-    inline const juce::Colour accent { 0xff9fd6e8 };     // moonlight
-    inline const juce::Colour firefly { 0xffd7f56a };
+    inline const juce::Colour background { 0xff0a0816 }; // indigo night
+    inline const juce::Colour panel { 0xff1b1329 };      // amethyst-stained wood
+    inline const juce::Colour panelEdge { 0xff5c4683 };  // violet rim
+    inline const juce::Colour grid { 0x26c8b8ff };       // faint lilac lines (translucent)
+    inline const juce::Colour gridText { 0xffa497d2 };
+    inline const juce::Colour text { 0xfff1eaff };       // moon-white
+    inline const juce::Colour dimText { 0xffb3a6d4 };
+    inline const juce::Colour curve { 0xffffcf6e };      // sacred gold
+    inline const juce::Colour spectrum { 0xff5ee8e0 };   // spirit aqua
+    inline const juce::Colour marker { 0xffb48cff };     // amethyst
+    inline const juce::Colour focus { 0xffff5c9a };      // rose flame
+    inline const juce::Colour accent { 0xffa8e6ff };     // moonlight
+    inline const juce::Colour firefly { 0xff8ff7ff };
 
-    // One colour per band, cycling: orchid, torch, firefly, jade, river, moon, violet, ember.
+    // One colour per band, cycling: rose, gold, mint, aqua, sapphire, amethyst, orchid, coral.
     inline juce::Colour band (int index)
     {
-        static const juce::Colour palette[] = { juce::Colour (0xffff8fb8), juce::Colour (0xffffb347), juce::Colour (0xffd7f56a),
-            juce::Colour (0xff5fe0a8), juce::Colour (0xff4fd0e0), juce::Colour (0xff8fb8ff), juce::Colour (0xffc39bff),
-            juce::Colour (0xffff7a59) };
+        static const juce::Colour palette[] = { juce::Colour (0xffff8fd0), juce::Colour (0xffffc76b), juce::Colour (0xff9dffb0),
+            juce::Colour (0xff5ee8e0), juce::Colour (0xff7fb2ff), juce::Colour (0xffa98bff), juce::Colour (0xffe07bff),
+            juce::Colour (0xffff7f8a) };
         return palette[index % 8];
     }
 
@@ -53,7 +54,7 @@ namespace solfa::ui::theme
             setColour (juce::ComboBox::outlineColourId, panelEdge);
             setColour (juce::ComboBox::textColourId, text);
             setColour (juce::ComboBox::arrowColourId, curve);
-            setColour (juce::PopupMenu::backgroundColourId, juce::Colour (0xff140e09));
+            setColour (juce::PopupMenu::backgroundColourId, juce::Colour (0xff130e20));
             setColour (juce::PopupMenu::textColourId, text);
             setColour (juce::PopupMenu::headerTextColourId, curve);
             setColour (juce::PopupMenu::highlightedBackgroundColourId, panelEdge);
@@ -61,15 +62,15 @@ namespace solfa::ui::theme
             setColour (juce::TextButton::buttonColourId, panel);
             setColour (juce::TextButton::buttonOnColourId, curve);
             setColour (juce::TextButton::textColourOffId, text.withAlpha (0.85f));
-            setColour (juce::TextButton::textColourOnId, juce::Colour (0xff1a0f05));
+            setColour (juce::TextButton::textColourOnId, juce::Colour (0xff1a0f2a));
             setColour (juce::ToggleButton::textColourId, dimText);
             setColour (juce::ToggleButton::tickColourId, curve);
-            setColour (juce::TooltipWindow::backgroundColourId, juce::Colour (0xff140e09));
+            setColour (juce::TooltipWindow::backgroundColourId, juce::Colour (0xff130e20));
             setColour (juce::TooltipWindow::textColourId, text);
             setColour (juce::TooltipWindow::outlineColourId, panelEdge);
         }
 
-        // Carved stone knob: rune dots around the rim, a glowing ember arc, a lit pointer bead.
+        // Carved stone knob: rune dots around the rim, a glowing arc, a lit pointer bead.
         void drawRotarySlider (juce::Graphics& g, int x, int y, int w, int h, float pos, float start, float end,
             juce::Slider& slider) override
         {
@@ -111,8 +112,8 @@ namespace solfa::ui::theme
             // Stone body
             g.setColour (juce::Colours::black.withAlpha (0.5f));
             g.fillEllipse (centre.x - bodyR, centre.y - bodyR + 2.0f, bodyR * 2, bodyR * 2);
-            g.setGradientFill (juce::ColourGradient (juce::Colour (0xff4a3b2c), centre.x - bodyR * 0.4f, centre.y - bodyR * 0.5f,
-                juce::Colour (0xff15100b), centre.x + bodyR, centre.y + bodyR, true));
+            g.setGradientFill (juce::ColourGradient (juce::Colour (0xff3f3659), centre.x - bodyR * 0.4f, centre.y - bodyR * 0.5f,
+                juce::Colour (0xff110d1d), centre.x + bodyR, centre.y + bodyR, true));
             g.fillEllipse (centre.x - bodyR, centre.y - bodyR, bodyR * 2, bodyR * 2);
             g.setColour (panelEdge.withAlpha (0.9f));
             g.drawEllipse (centre.x - bodyR, centre.y - bodyR, bodyR * 2, bodyR * 2, 1.0f);
@@ -147,7 +148,7 @@ namespace solfa::ui::theme
             g.fillPath (p);
         }
 
-        // Wooden plaques; "on" plaques glow with torchlight.
+        // Wooden plaques; "on" plaques glow gold.
         void drawButtonBackground (juce::Graphics& g, juce::Button& b, const juce::Colour&, bool highlighted, bool down) override
         {
             const auto r = b.getLocalBounds().toFloat().reduced (0.5f);
@@ -155,7 +156,7 @@ namespace solfa::ui::theme
             if (on)
             {
                 glow (g, r.getCentre(), r.getWidth() * 0.7f, curve, 0.25f);
-                g.setGradientFill (juce::ColourGradient (curve.brighter (0.2f), 0, r.getY(), juce::Colour (0xffd9782a), 0, r.getBottom(), false));
+                g.setGradientFill (juce::ColourGradient (curve.brighter (0.2f), 0, r.getY(), juce::Colour (0xffd2953c), 0, r.getBottom(), false));
             }
             else
                 g.setGradientFill (juce::ColourGradient (panel.brighter (highlighted ? 0.25f : 0.1f), 0, r.getY(), panel.darker (0.5f), 0,

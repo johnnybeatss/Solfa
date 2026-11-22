@@ -100,8 +100,8 @@ namespace solfa::ui::scenery
     void drawNightScene (juce::Graphics& g, juce::Rectangle<float> r)
     {
         using juce::Colour;
-        juce::ColourGradient sky (Colour (0xff0e1c30), r.getX(), r.getY(), Colour (0xff060d0a), r.getX(), r.getBottom(), false);
-        sky.addColour (0.5, Colour (0xff0c211f));
+        juce::ColourGradient sky (Colour (0xff1c1040), r.getX(), r.getY(), Colour (0xff07071a), r.getX(), r.getBottom(), false);
+        sky.addColour (0.5, Colour (0xff121a42));
         g.setGradientFill (sky);
         g.fillRect (r);
 
@@ -114,20 +114,31 @@ namespace solfa::ui::scenery
             const auto x = r.getX() + rng.nextFloat() * r.getWidth();
             const auto y = r.getY() + fy * r.getHeight();
             const auto s = 0.5f + rng.nextFloat() * 1.3f;
-            g.setColour (Colour (0xffe8efff).withAlpha ((0.12f + 0.55f * rng.nextFloat()) * (1.0f - fy)));
+            g.setColour (Colour (0xffeee8ff).withAlpha ((0.12f + 0.55f * rng.nextFloat()) * (1.0f - fy)));
             g.fillEllipse (x - s / 2, y - s / 2, s, s);
+        }
+
+        // Aurora: two soft washes (aqua, violet) drifting across the upper sky
+        for (auto [cx, cy, rx, colour, alpha] : { std::tuple { 0.30f, 0.16f, 0.42f, Colour (0xff4fe6d2), 0.10f },
+                                                    std::tuple { 0.62f, 0.10f, 0.36f, Colour (0xffb06bff), 0.11f } })
+        {
+            const juce::Point<float> c { r.getX() + r.getWidth() * cx, r.getY() + r.getHeight() * cy };
+            const auto w = r.getWidth() * rx, h = r.getHeight() * 0.13f;
+            juce::ColourGradient wash (colour.withAlpha (alpha), c.x, c.y, colour.withAlpha (0.0f), c.x + w, c.y, true);
+            g.setGradientFill (wash);
+            g.fillEllipse (c.x - w, c.y - h, w * 2, h * 2);
         }
 
         // Moon with a wide halo
         const auto mr = juce::jlimit (12.0f, 30.0f, juce::jmin (r.getWidth(), r.getHeight()) * 0.055f);
         const juce::Point<float> mc { r.getRight() - r.getWidth() * 0.09f, r.getY() + r.getHeight() * 0.2f };
-        g.setGradientFill (juce::ColourGradient (Colour (0xffcfe4ff).withAlpha (0.16f), mc.x, mc.y, Colour (0xffcfe4ff).withAlpha (0.0f),
+        g.setGradientFill (juce::ColourGradient (Colour (0xffd9ccff).withAlpha (0.18f), mc.x, mc.y, Colour (0xffd9ccff).withAlpha (0.0f),
             mc.x + mr * 6, mc.y, true));
         g.fillEllipse (mc.x - mr * 6, mc.y - mr * 6, mr * 12, mr * 12);
-        g.setGradientFill (juce::ColourGradient (Colour (0xfffdf8e4), mc.x - mr * 0.35f, mc.y - mr * 0.35f, Colour (0xffc4cfbf),
+        g.setGradientFill (juce::ColourGradient (Colour (0xfffbf7ff), mc.x - mr * 0.35f, mc.y - mr * 0.35f, Colour (0xffc6bce6),
             mc.x + mr, mc.y + mr, true));
         g.fillEllipse (mc.x - mr, mc.y - mr, mr * 2, mr * 2);
-        g.setColour (Colour (0xff4a5848).withAlpha (0.18f));
+        g.setColour (Colour (0xff5a4f7c).withAlpha (0.18f));
         g.fillEllipse (mc.x - mr * 0.45f, mc.y - mr * 0.1f, mr * 0.42f, mr * 0.36f);
         g.fillEllipse (mc.x + mr * 0.15f, mc.y - mr * 0.5f, mr * 0.3f, mr * 0.26f);
         g.fillEllipse (mc.x + mr * 0.2f, mc.y + mr * 0.3f, mr * 0.22f, mr * 0.2f);
@@ -147,17 +158,17 @@ namespace solfa::ui::scenery
             }
             hills.lineTo (r.getRight(), r.getBottom());
             hills.closeSubPath();
-            g.setColour (Colour (0xff10261f));
+            g.setColour (Colour (0xff1b1640));
             g.fillPath (hills);
         }
 
         // Mist band in front of the hills
-        g.setGradientFill (juce::ColourGradient (Colour (0xff6fa59a).withAlpha (0.0f), 0, r.getY() + r.getHeight() * 0.62f,
-            Colour (0xff6fa59a).withAlpha (0.07f), 0, r.getY() + r.getHeight() * 0.74f, false));
+        g.setGradientFill (juce::ColourGradient (Colour (0xffa08fe6).withAlpha (0.0f), 0, r.getY() + r.getHeight() * 0.62f,
+            Colour (0xffa08fe6).withAlpha (0.09f), 0, r.getY() + r.getHeight() * 0.74f, false));
         g.fillRect (r.withTop (r.getY() + r.getHeight() * 0.62f).withHeight (r.getHeight() * 0.12f));
 
         // Treeline of rounded crowns
-        const auto treeColour = Colour (0xff0a1914);
+        const auto treeColour = Colour (0xff110e28);
         {
             juce::Path crowns;
             const auto line = r.getY() + r.getHeight() * 0.79f;
@@ -179,28 +190,28 @@ namespace solfa::ui::scenery
             drawPalm (g, { r.getX() + r.getWidth() * fx, ground }, r.getHeight() * fh, r.getHeight() * lean, treeColour.darker (0.2f));
 
         // Ground and the village
-        g.setColour (Colour (0xff050c09));
+        g.setColour (Colour (0xff09071a));
         g.fillRect (r.withTop (ground));
         const auto hutW = juce::jlimit (34.0f, 92.0f, r.getWidth() * 0.065f);
-        const auto hutColour = Colour (0xff040a08);
-        const auto lamp = Colour (0xffffa94d);
+        const auto hutColour = Colour (0xff060516);
+        const auto lamp = Colour (0xffffc27a);
         for (auto [fx, size] : { std::pair { 0.13f, 1.0f }, std::pair { 0.30f, 0.85f }, std::pair { 0.66f, 0.85f }, std::pair { 0.85f, 1.0f } })
             drawHut (g, r.getX() + r.getWidth() * fx, ground, hutW * size, hutColour, lamp);
 
         // Fire pit (stones and logs; the flame itself is animated)
         const auto fire = firePosition (r);
         const auto fs = fireScale (r);
-        g.setColour (Colour (0xff1a120c));
+        g.setColour (Colour (0xff1d1632));
         for (int i = -2; i <= 2; ++i)
             g.fillEllipse (fire.x + (float) i * fs * 0.32f - fs * 0.14f, fire.y - fs * 0.1f, fs * 0.28f, fs * 0.18f);
-        g.setColour (Colour (0xff2a1a10));
+        g.setColour (Colour (0xff2b1b2e));
         g.drawLine (fire.x - fs * 0.5f, fire.y, fire.x + fs * 0.4f, fire.y - fs * 0.2f, juce::jmax (1.5f, fs * 0.08f));
         g.drawLine (fire.x + fs * 0.5f, fire.y, fire.x - fs * 0.4f, fire.y - fs * 0.2f, juce::jmax (1.5f, fs * 0.08f));
     }
 
     void drawCanopy (juce::Graphics& g, juce::Rectangle<float> r)
     {
-        const auto c = juce::Colour (0xff030806);
+        const auto c = juce::Colour (0xff050413);
         juce::Random rng (404);
         juce::Path leaves;
 
@@ -256,8 +267,8 @@ namespace solfa::ui::scenery
     {
         const auto flicker = 0.82f + 0.11f * std::sin (t * 9.3f) + 0.07f * std::sin (t * 23.1f + 1.3f);
         const auto glowR = scale * 7.0f * flicker;
-        g.setGradientFill (juce::ColourGradient (juce::Colour (0xffff8a2a).withAlpha (0.30f * flicker), base.x, base.y - scale * 0.4f,
-            juce::Colour (0xffff8a2a).withAlpha (0.0f), base.x + glowR, base.y, true));
+        g.setGradientFill (juce::ColourGradient (juce::Colour (0xff9a6bff).withAlpha (0.34f * flicker), base.x, base.y - scale * 0.4f,
+            juce::Colour (0xff9a6bff).withAlpha (0.0f), base.x + glowR, base.y, true));
         g.fillEllipse (base.x - glowR, base.y - scale * 0.4f - glowR, glowR * 2, glowR * 2);
 
         // Two flame tongues swaying out of phase
@@ -271,8 +282,8 @@ namespace solfa::ui::scenery
             flame.quadraticTo (base.x - w * 0.8f, base.y - h * 0.6f, base.x + sway, base.y - h);
             flame.quadraticTo (base.x + w * 0.8f, base.y - h * 0.6f, base.x + w, base.y - scale * 0.1f);
             flame.closeSubPath();
-            g.setGradientFill (juce::ColourGradient (juce::Colour (k == 0 ? 0xffffd27a : 0xfffff1b8), base.x, base.y,
-                juce::Colour (0xffff5a1f).withAlpha (0.0f), base.x, base.y - h, false));
+            g.setGradientFill (juce::ColourGradient (juce::Colour (k == 0 ? 0xffb9a2ff : 0xffe4fbff), base.x, base.y,
+                juce::Colour (0xff7448ff).withAlpha (0.0f), base.x, base.y - h, false));
             g.fillPath (flame);
         }
     }
@@ -343,7 +354,7 @@ namespace solfa::ui::scenery
                 grain.startNewSubPath (r.getX(), y);
                 for (float x = r.getX() + 40.0f; x < r.getRight() + 40.0f; x += 40.0f)
                     grain.quadraticTo (x - 20.0f, y + (rng.nextFloat() - 0.5f) * 4.0f, x, y + (rng.nextFloat() - 0.5f) * 2.0f);
-                g.setColour (juce::Colour (0xffffe2b8).withAlpha (0.018f + 0.02f * rng.nextFloat()));
+                g.setColour (juce::Colour (0xffe6d8ff).withAlpha (0.018f + 0.02f * rng.nextFloat()));
                 g.strokePath (grain, juce::PathStrokeType (1.0f));
             }
         }
@@ -374,9 +385,10 @@ namespace solfa::ui::scenery
 
     void Fireflies::draw (juce::Graphics& g, juce::Rectangle<float> r) const
     {
-        const auto glowColour = theme::firefly;
-        for (const auto& f : flies)
+        for (size_t i = 0; i < flies.size(); ++i)
         {
+            const auto& f = flies[i];
+            const auto glowColour = i % 3 == 0 ? theme::marker : theme::firefly; // mostly aqua, some violet
             const auto blink = std::sin (time * f.rate + f.phase);
             const auto b = blink > 0.0f ? blink * blink * blink : 0.0f;
             if (b < 0.02f)
@@ -388,7 +400,7 @@ namespace solfa::ui::scenery
             const auto glow = 7.0f * f.size;
             g.setGradientFill (juce::ColourGradient (glowColour.withAlpha (0.45f * b), x, y, glowColour.withAlpha (0.0f), x + glow, y, true));
             g.fillEllipse (x - glow, y - glow, glow * 2, glow * 2);
-            g.setColour (juce::Colour (0xfff6ffd0).withAlpha (0.9f * b));
+            g.setColour (juce::Colour (0xfff2fdff).withAlpha (0.9f * b));
             const auto core = 1.1f * f.size;
             g.fillEllipse (x - core, y - core, core * 2, core * 2);
         }

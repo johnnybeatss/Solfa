@@ -137,7 +137,7 @@ void PluginEditor::paint (juce::Graphics& g)
     background.draw (g, getLocalBounds(), [] (juce::Graphics& bg, juce::Rectangle<float> r) {
         namespace theme = ui::theme;
         // Jungle floor behind the panels
-        bg.setGradientFill (juce::ColourGradient (juce::Colour (0xff0c1712), 0, r.getY(), juce::Colour (0xff040907), 0, r.getBottom(), false));
+        bg.setGradientFill (juce::ColourGradient (juce::Colour (0xff110c24), 0, r.getY(), juce::Colour (0xff05040e), 0, r.getBottom(), false));
         bg.fillRect (r);
 
         // Top bar: a carved wooden beam
@@ -152,7 +152,7 @@ void PluginEditor::paint (juce::Graphics& g)
             grain.startNewSubPath (beam.getX(), y);
             for (float x = 60.0f; x < beam.getRight() + 60.0f; x += 60.0f)
                 grain.quadraticTo (x - 30.0f, y + (rng.nextFloat() - 0.5f) * 3.0f, x, y);
-            bg.setColour (juce::Colour (0xffffe2b8).withAlpha (0.025f));
+            bg.setColour (juce::Colour (0xffe6d8ff).withAlpha (0.025f));
             bg.strokePath (grain, juce::PathStrokeType (1.0f));
         }
         bg.setColour (theme::panelEdge);
@@ -160,11 +160,11 @@ void PluginEditor::paint (juce::Graphics& g)
         ui::scenery::drawCarvedBand (bg, { beam.getX() + 8.0f, beam.getBottom() - 6.0f, beam.getWidth() - 16.0f, 3.5f },
             theme::curve.withAlpha (0.25f));
 
-        // Logo: seed of life with a warm glow, and the name in torch gold
+        // Logo: seed of life with a warm glow, and the name in gold
         const juce::Point<float> logo { 27.0f, 23.0f };
         theme::glow (bg, logo, 26.0f, theme::curve, 0.3f);
         ui::scenery::drawSeedOfLife (bg, logo, 13.0f, theme::curve, 1.2f);
-        bg.setGradientFill (juce::ColourGradient (juce::Colour (0xffffe3a3), 0, 8.0f, juce::Colour (0xffe08a2c), 0, 30.0f, false));
+        bg.setGradientFill (juce::ColourGradient (juce::Colour (0xfffff0c8), 0, 8.0f, juce::Colour (0xffd99a45), 0, 30.0f, false));
         bg.setFont (juce::FontOptions (21.0f, juce::Font::bold).withKerningFactor (0.2f));
         bg.drawText ("SOLFA", juce::Rectangle<float> (47, 5, 100, 26), juce::Justification::centredLeft);
         bg.setColour (theme::dimText);

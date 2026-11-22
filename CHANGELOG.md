@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.2 (beta)
+
+- **More mystical colours:** indigo-violet night sky with a faint aqua and violet aurora,
+  amethyst-stained wood panels and stone knobs, a violet spirit fire, aqua and violet spirit
+  lights in place of yellow fireflies, aqua analyser mist, amethyst solfeggio beams and a
+  rose-pink Focus beam. The EQ curve stays gold so it remains the clearest thing on screen.
+  Colours only; sound, parameters and layout are unchanged.
+
 ## 0.9.1 (beta)
 
 - **New look:** a jungle village at night. Moonlit sky with stars, palm and canopy silhouettes,

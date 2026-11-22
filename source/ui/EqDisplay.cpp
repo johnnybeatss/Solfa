@@ -184,7 +184,7 @@ namespace solfa::ui
         const auto scene = getLocalBounds().toFloat();
         scenery::drawFire (g, scenery::firePosition (scene), scenery::fireScale (scene), fireflies.getTime());
 
-        // Spectrum: jade mist
+        // Spectrum: aqua spirit mist
         {
             juce::Path spec;
             spec.startNewSubPath (area.getX(), area.getBottom());
@@ -241,7 +241,7 @@ namespace solfa::ui
             }
         }
         {
-            // The Focus: an ember beam
+            // The Focus: a rose-flame beam
             const auto focus = processor.getEffectiveFocusHz();
             const auto x = xOf (focus);
             g.setColour (theme::focus.withAlpha (0.16f));
@@ -298,7 +298,7 @@ namespace solfa::ui
             }
         }
 
-        // Total curve: torchlight with a soft glow
+        // Total curve: sacred gold with a soft glow
         {
             const auto total = curvePath ([&] (double f) { return model.totalDb (f); });
             g.setColour (theme::curve.withAlpha (0.08f));
@@ -323,7 +323,7 @@ namespace solfa::ui
             g.setGradientFill (juce::ColourGradient (colour.brighter (0.6f), pos.x - r * 0.3f, pos.y - r * 0.3f, colour.darker (0.2f),
                 pos.x + r, pos.y + r, true));
             g.fillEllipse (pos.x - r, pos.y - r, 2 * r, 2 * r);
-            g.setColour (juce::Colour (0xff120a04));
+            g.setColour (juce::Colour (0xff140a22));
             g.setFont (juce::FontOptions (9.0f, juce::Font::bold));
             g.drawText (juce::String (b + 1), juce::Rectangle<float> (pos.x - r, pos.y - r, 2 * r, 2 * r), juce::Justification::centred);
             if (b == selected)
